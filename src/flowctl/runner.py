@@ -25,6 +25,32 @@ def get_next_transitions(workflow: WorkflowDef, current: str, context: dict) -> 
     return results
 
 
+def _resolve_prompt(workflow: WorkflowDef, node_def, node_name: str) -> str:
+    """
+    Resolve prompt for a node in the following order:
+    1. Node's explicit prompt
+    2. Role binding prompt (if binding exists for this node)
+    3. Role's default prompt
+    4. Error if no prompt found
+    """
+    if node_def.prompt:
+        return node_def.prompt
+
+    if workflow.roles and node_def.role in workflow.roles:
+        role_config = workflow.roles[node_def.role]
+        if role_config.bindings and node_name in role_config.bindings:
+            binding = role_config.bindings[node_name]
+            if binding.prompt:
+                return binding.prompt
+        if role_config.default_prompt:
+            return role_config.default_prompt
+
+    raise RuntimeError(
+        f"No prompt found for node '{node_name}' with role '{node_def.role}'. "
+        f"Specify a prompt on the node, add a role binding, or set a default_prompt on the role."
+    )
+
+
 def run_workflow(
     workflow: WorkflowDef,
     run_dir: Path,
@@ -56,9 +82,11 @@ def run_workflow(
         if not node_def:
             raise RuntimeError(f"Node '{next_node}' not found in workflow definition")
 
+        prompt_path = _resolve_prompt(workflow, node_def, next_node)
+
         inp = ExecutorInput(
             role=node_def.role,
-            prompt_path=node_def.prompt,
+            prompt_path=prompt_path,
             skill_paths=node_def.skills,
             inputs=node_def.inputs,
             outputs=node_def.outputs,

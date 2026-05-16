@@ -7,11 +7,19 @@ class FlowctlConfig(BaseModel):
     framework_version: str = "0.1.0"
 
 
+class RoleBinding(BaseModel):
+    role: str
+    prompt: Optional[str] = None
+    model_override: Optional[str] = None
+    skills_override: Optional[list[str]] = None
+
+
 class RoleConfig(BaseModel):
     name: str
     model: str
     description: Optional[str] = None
     default_prompt: Optional[str] = None
+    bindings: Optional[dict[str, RoleBinding]] = None
 
 
 class Transition(BaseModel):
@@ -25,7 +33,7 @@ class Transition(BaseModel):
 
 class Node(BaseModel):
     role: str
-    prompt: str
+    prompt: Optional[str] = None
     skills: list[str] = []
     inputs: dict[str, str] = {}
     outputs: dict[str, str] = {}
