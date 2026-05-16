@@ -8,6 +8,13 @@ nodes:
     inputs: {}
     outputs: {clarify_md: clarify.md}
 
+  human_confirm_clarify:
+    role: human
+    prompt: prompts/human-confirm-clarify.md
+    executor: opencode
+    inputs: {clarify: clarify.md}
+    outputs: {clarify_approved: clarify-approved.txt}
+
   design:
     role: architect
     prompt: prompts/design.md
@@ -22,12 +29,12 @@ nodes:
     inputs: {design: docs/design.md}
     outputs: {test_design_md: docs/test-design.md}
 
-  human_confirm:
+  human_confirm_design:
     role: human
-    prompt: prompts/human-confirm.md
+    prompt: prompts/human-confirm-design.md
     executor: opencode
     inputs: {design: docs/design.md, test_design: docs/test-design.md}
-    outputs: {approved: approved.txt}
+    outputs: {design_approved: design-approved.txt}
 
   explore:
     role: developer
@@ -83,21 +90,29 @@ transitions:
     to: clarify
 
   - from: clarify
+    to: human_confirm_clarify
+
+  - from: human_confirm_clarify
     to: design
+    when: clarify_approved == "yes"
+
+  - from: human_confirm_clarify
+    to: clarify
+    when: clarify_approved == "no"
 
   - from: design
     to: test_design
 
   - from: test_design
-    to: human_confirm
+    to: human_confirm_design
 
-  - from: human_confirm
+  - from: human_confirm_design
     to: explore
-    when: approved == "yes"
+    when: design_approved == "yes"
 
-  - from: human_confirm
+  - from: human_confirm_design
     to: clarify
-    when: approved == "no"
+    when: design_approved == "no"
 
   - from: explore
     to: coding
