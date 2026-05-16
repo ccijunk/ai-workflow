@@ -1,0 +1,28 @@
+[project]
+name = "flowctl"
+version = "0.1.0"
+description = "A node-graph workflow engine that takes a software spec and produces a code change"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+flowctl = "flowctl.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flowctl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
