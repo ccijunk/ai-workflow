@@ -31,6 +31,7 @@ def run_workflow(
     adapter: ExecutorAdapter | None = None,
     dry_run: bool = False,
     initial_context: dict[str, str] | None = None,
+    workflow_dir: Path | None = None,
 ) -> dict[str, str]:
     adapter = adapter or EchoAdapter()
     context: dict[str, str] = initial_context or {}
@@ -63,6 +64,7 @@ def run_workflow(
             inputs=node_def.inputs,
             outputs=node_def.outputs,
             run_dir=run_dir,
+            workflow_dir=workflow_dir,
         )
 
         if dry_run:

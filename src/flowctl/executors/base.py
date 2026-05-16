@@ -12,6 +12,7 @@ class ExecutorInput:
     inputs: dict[str, str]
     outputs: dict[str, str]
     run_dir: Path
+    workflow_dir: Path = None
 
 
 @dataclass

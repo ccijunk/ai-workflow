@@ -13,7 +13,8 @@ class OpencodeAdapter(ExecutorAdapter):
         prompt_content = self._load_prompt(inp)
         
         cmd = ["opencode", "run"]
-        cmd.extend(["--dir", str(inp.run_dir)])
+        abs_run_dir = inp.run_dir.resolve()
+        cmd.extend(["--dir", str(abs_run_dir)])
         cmd.extend(["--format", "json"])
 
         if self.model:
@@ -22,27 +23,38 @@ class OpencodeAdapter(ExecutorAdapter):
             cmd.extend(["--agent", self.agent])
 
         for skill_path in inp.skill_paths:
+            if inp.workflow_dir:
+                src_skill = inp.workflow_dir / skill_path
+            else:
+                src_skill = Path(skill_path)
             skill_file = inp.run_dir / Path(skill_path).name
-            if Path(skill_path).exists():
-                skill_file.write_text(Path(skill_path).read_text())
+            if src_skill.exists():
+                skill_file.write_text(src_skill.read_text())
             cmd.extend(["--file", str(skill_file)])
 
         cmd.append(prompt_content)
 
         proc = subprocess.run(
             cmd,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            cwd=str(inp.run_dir),
+            cwd=str(abs_run_dir),
         )
 
         outputs = {}
+        session_id = None
+
         if proc.returncode == 0:
+            session_id = self._extract_session_id(proc.stdout) or self._extract_session_id(proc.stderr)
             self._extract_and_write_outputs(proc.stdout, inp.outputs, inp.run_dir)
             for key, rel_path in inp.outputs.items():
                 artifact_path = inp.run_dir / rel_path
                 if artifact_path.exists():
                     outputs[key] = artifact_path.read_text()
+
+        if session_id:
+            self._delete_session(session_id)
 
         return ExecutorResult(
             outputs=outputs,
@@ -51,10 +63,31 @@ class OpencodeAdapter(ExecutorAdapter):
             stderr=proc.stderr,
         )
 
+    def _extract_session_id(self, stdout: str) -> str | None:
+        for line in stdout.splitlines():
+            try:
+                event = json.loads(line)
+                if "sessionID" in event:
+                    return event["sessionID"]
+            except json.JSONDecodeError:
+                continue
+        return None
+
+    def _delete_session(self, session_id: str):
+        subprocess.run(
+            ["opencode", "session", "delete", session_id],
+            capture_output=True,
+            text=True,
+        )
+
     def _load_prompt(self, inp: ExecutorInput) -> str:
         prompt_lines = []
         
-        prompt_file = inp.run_dir / inp.prompt_path
+        if inp.workflow_dir:
+            prompt_file = inp.workflow_dir / inp.prompt_path
+        else:
+            prompt_file = inp.run_dir / inp.prompt_path
+        
         if prompt_file.exists():
             prompt_lines.append(prompt_file.read_text())
         else:
