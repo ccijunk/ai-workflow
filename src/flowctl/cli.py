@@ -143,5 +143,6 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         log_format=log_format,
         resume=resume,
         approval_decision=approval_decision,
+        reject_reason=reject_reason,
     )
     click.echo(f"Run complete. Context: {result}")
