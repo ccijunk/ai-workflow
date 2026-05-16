@@ -9,6 +9,7 @@ from .logger import WorkflowLogger
 from .state import save_state, load_state, has_state, clear_state, WorkflowStatus
 
 MAX_ITERATIONS = 100
+MAX_REJECTS = 5  # Maximum reject attempts per approval node
 
 
 def resolve_executor(node: Node, default: str, config: FlowctlConfig | None) -> str:
