@@ -34,3 +34,52 @@ def test_run_command():
         result = runner.invoke(main, ["run", "--dry-run"])
         assert result.exit_code == 0
         assert "Run complete" in result.output
+
+
+def test_cli_approve_reject_flags():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        flows_dir = Path(".flows/workflows")
+        flows_dir.mkdir(parents=True)
+        workflow_file = flows_dir / "default.yaml"
+        workflow_file.write_text(
+            "version: '1'\n"
+            "nodes:\n"
+            "  planner:\n"
+            "    role: planner\n"
+            "    prompt: prompts/plan.md\n"
+            "    inputs: {}\n"
+            "    outputs: {spec: spec.md}\n"
+            "transitions:\n"
+            "  - from: __start__\n"
+            "    to: planner\n"
+            "  - from: planner\n"
+            "    to: __end__\n"
+        )
+        
+        # Test approve flag validation - must use --resume
+        result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--approve"])
+        assert result.exit_code != 0
+        assert "must use --resume" in result.output.lower()
+        
+        # Test both flags error
+        result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--resume", "--approve", "--reject"])
+        assert result.exit_code != 0
+        assert "cannot use both" in result.output.lower()
+
+
+def test_cli_status_command():
+    from flowctl.state import save_state, WorkflowStatus
+    
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        run_dir = Path(".flows/runs/test-run")
+        run_dir.mkdir(parents=True)
+        save_state(run_dir, "human_approval", {"input": "test.md"}, 1,
+                   status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1")
+        
+        result = runner.invoke(main, ["status", "--run-id", "test-run"])
+        
+        assert result.exit_code == 0
+        assert "PAUSED" in result.output
+        assert "human_approval" in result.output

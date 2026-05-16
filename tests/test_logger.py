@@ -122,3 +122,14 @@ def test_logger_error():
     
     log_file.unlink()
     run_dir.rmdir()
+
+
+def test_log_pause(tmp_path):
+    from flowctl.logger import WorkflowLogger
+    
+    logger = WorkflowLogger("test-run", tmp_path, "INFO", "json")
+    logger.log_pause("human_confirm_clarify")
+    
+    log_content = (tmp_path / "execution.log").read_text()
+    assert "pause" in log_content
+    assert "human_confirm_clarify" in log_content

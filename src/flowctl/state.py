@@ -1,7 +1,15 @@
 import json
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
+
+
+class WorkflowStatus(str, Enum):
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 @dataclass
@@ -10,17 +18,39 @@ class WorkflowState:
     context: dict[str, str]
     iterations: int
     timestamp: str
+    status: WorkflowStatus = WorkflowStatus.RUNNING
+    pending_approval_for: Optional[str] = None
+    pending_transition_from: Optional[str] = None
 
 
-def save_state(run_dir: Path, current: str, context: dict[str, str], iterations: int) -> None:
+def save_state(
+    run_dir: Path,
+    current: str,
+    context: dict[str, str],
+    iterations: int,
+    status: WorkflowStatus = WorkflowStatus.RUNNING,
+    pending_approval_for: Optional[str] = None,
+    pending_transition_from: Optional[str] = None,
+) -> None:
     state_file = run_dir / "state.json"
     state = WorkflowState(
         current_node=current,
         context=context,
         iterations=iterations,
         timestamp=_timestamp(),
+        status=status,
+        pending_approval_for=pending_approval_for,
+        pending_transition_from=pending_transition_from,
     )
-    state_file.write_text(json.dumps(state.__dict__, indent=2))
+    state_file.write_text(json.dumps({
+        "current_node": state.current_node,
+        "context": state.context,
+        "iterations": state.iterations,
+        "timestamp": state.timestamp,
+        "status": state.status.value if isinstance(state.status, WorkflowStatus) else state.status,
+        "pending_approval_for": state.pending_approval_for,
+        "pending_transition_from": state.pending_transition_from,
+    }, indent=2))
 
 
 def load_state(run_dir: Path) -> Optional[WorkflowState]:
@@ -30,11 +60,16 @@ def load_state(run_dir: Path) -> Optional[WorkflowState]:
     
     try:
         data = json.loads(state_file.read_text())
+        status_val = data.get("status", "running")
+        status = WorkflowStatus(status_val) if status_val in [s.value for s in WorkflowStatus] else WorkflowStatus.RUNNING
         return WorkflowState(
             current_node=data["current_node"],
             context=data["context"],
             iterations=data["iterations"],
             timestamp=data["timestamp"],
+            status=status,
+            pending_approval_for=data.get("pending_approval_for"),
+            pending_transition_from=data.get("pending_transition_from"),
         )
     except (json.JSONDecodeError, KeyError):
         return None

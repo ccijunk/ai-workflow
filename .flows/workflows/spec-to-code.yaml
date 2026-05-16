@@ -25,7 +25,7 @@ nodes:
   human_confirm_clarify:
     role: human
     prompt: prompts/human-confirm-clarify.md
-    executor: opencode
+    executor: human
     inputs: {clarify: clarify.md}
     outputs: {clarify_approved: clarify-approved.txt}
 
@@ -46,7 +46,7 @@ nodes:
   human_confirm_design:
     role: human
     prompt: prompts/human-confirm-design.md
-    executor: opencode
+    executor: human
     inputs: {design: docs/design.md, test_design: docs/test-design.md}
     outputs: {design_approved: design-approved.txt}
 
