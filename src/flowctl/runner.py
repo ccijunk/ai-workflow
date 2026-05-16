@@ -1,12 +1,33 @@
 from pathlib import Path
-from .models import WorkflowDef
-from .executors import ExecutorAdapter, EchoAdapter
+import yaml
+from .models import WorkflowDef, Node, FlowctlConfig
+from .executors import ExecutorAdapter, EchoAdapter, ExecutorRegistry, create_default_registry
 from .executors.base import ExecutorInput, ExecutorResult
 from .artifact_validator import validate_artifacts
 from .logger import WorkflowLogger
 from .state import save_state, load_state, has_state, clear_state
 
 MAX_ITERATIONS = 100
+
+
+def resolve_executor(node: Node, default: str, config: FlowctlConfig | None) -> str:
+    if node.executor:
+        return node.executor
+    if default:
+        return default
+    if config and config.preferred_executor:
+        return config.preferred_executor
+    return "echo"
+
+
+def load_flowctl_config(workflow_dir: Path | None) -> FlowctlConfig | None:
+    if not workflow_dir:
+        return None
+    config_path = workflow_dir / ".flows" / "config.yaml"
+    if not config_path.exists():
+        return None
+    raw = yaml.safe_load(config_path.read_text())
+    return FlowctlConfig.model_validate(raw)
 
 
 def get_next_transitions(workflow: WorkflowDef, current: str, context: dict) -> list[str]:
@@ -31,6 +52,9 @@ def run_workflow(
     workflow: WorkflowDef,
     run_dir: Path,
     adapter: ExecutorAdapter | None = None,
+    registry: ExecutorRegistry | None = None,
+    default_executor: str = "echo",
+    executor_config: dict[str, dict] | None = None,
     dry_run: bool = False,
     initial_context: dict[str, str] | None = None,
     workflow_dir: Path | None = None,
@@ -38,14 +62,19 @@ def run_workflow(
     log_format: str = "json",
     resume: bool = False,
 ) -> dict[str, str]:
-    adapter = adapter or EchoAdapter()
+    config = load_flowctl_config(workflow_dir)
+    
+    if adapter is None:
+        registry = registry or create_default_registry()
+    
     context: dict[str, str] = initial_context or {}
     current = "__start__"
     iterations = 0
     
     run_id = run_dir.name
     logger = WorkflowLogger(run_id, run_dir, log_level, log_format)
-    logger.log_workflow_start(workflow=str(workflow_dir) if workflow_dir else "unknown", executor=adapter.__class__.__name__, initial_context=initial_context)
+    executor_name = adapter.__class__.__name__ if adapter else default_executor
+    logger.log_workflow_start(workflow=str(workflow_dir) if workflow_dir else "unknown", executor=executor_name, initial_context=initial_context)
 
     if resume and has_state(run_dir):
         state = load_state(run_dir)
@@ -94,7 +123,13 @@ def run_workflow(
         if dry_run:
             result = _mock_execution(inp, node_def)
         else:
-            result = adapter.execute(inp)
+            if adapter is not None:
+                node_adapter = adapter
+            else:
+                executor_name = resolve_executor(node_def, default_executor, config)
+                cfg = executor_config.get(executor_name, {}) if executor_config else {}
+                node_adapter = registry.get(executor_name, **cfg)
+            result = node_adapter.execute(inp)
 
         errors = validate_artifacts(node_def.outputs, run_dir)
         logger.log_validation(next_node, errors)

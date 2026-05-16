@@ -3,7 +3,7 @@ from pathlib import Path
 from .init_cmd import run_init
 from .loader import load_workflow, validate_workflow
 from .runner import run_workflow
-from .executors import EchoAdapter, OpencodeAdapter
+from .executors import create_default_registry
 
 
 @click.group()
@@ -53,14 +53,20 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
     run_dir = Path(".flows/runs") / (run_id or "latest")
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    if executor == "echo":
-        adapter = EchoAdapter()
-    elif executor == "opencode":
-        adapter = OpencodeAdapter(model=model, agent=agent)
-    else:
+    registry = create_default_registry()
+    
+    if executor not in registry.list_available():
         click.echo(f"Unknown executor: {executor}", err=True)
-        click.echo("Available executors: echo, opencode", err=True)
+        click.echo(f"Available: {', '.join(registry.list_available())}", err=True)
         raise click.Abort()
+
+    executor_config = {}
+    if model or agent:
+        executor_config["opencode"] = {}
+        if model:
+            executor_config["opencode"]["model"] = model
+        if agent:
+            executor_config["opencode"]["agent"] = agent
 
     initial_context = {}
     if issue:
@@ -69,6 +75,15 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         issue_file.write_text(issue)
 
     result = run_workflow(
-        wf, run_dir, adapter=adapter, dry_run=dry_run, initial_context=initial_context, workflow_dir=wf_path.parent.parent, log_level=log_level, log_format=log_format, resume=resume
+        wf, run_dir,
+        registry=registry,
+        default_executor=executor,
+        executor_config=executor_config,
+        dry_run=dry_run,
+        initial_context=initial_context,
+        workflow_dir=wf_path.parent.parent,
+        log_level=log_level,
+        log_format=log_format,
+        resume=resume,
     )
     click.echo(f"Run complete. Context: {result}")
