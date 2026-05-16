@@ -108,7 +108,8 @@ class OpencodeAdapter(ExecutorAdapter):
             prompt_lines.append("\n## Expected Outputs:")
             prompt_lines.append("Create the following output files:")
             for key, path in inp.outputs.items():
-                prompt_lines.append(f"  - {path} (output '{key}')")
+                abs_path = inp.run_dir.resolve() / path
+                prompt_lines.append(f"  - {abs_path} (output '{key}')")
         
         return "\n".join(prompt_lines)
 
