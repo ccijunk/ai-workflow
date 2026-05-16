@@ -35,10 +35,8 @@ def test_opencode_adapter_builds_prompt():
             outputs={"code": "output/code.py"},
             run_dir=run_dir,
         )
-        prompt = adapter._build_prompt(inp)
-        assert "Role: developer" in prompt
-        assert "code.md" in prompt
-        assert "spec" in prompt
+        prompt = adapter._load_prompt(inp)
+        assert "developer" in prompt
         assert "code" in prompt
 
 

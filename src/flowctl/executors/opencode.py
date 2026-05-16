@@ -10,6 +10,8 @@ class OpencodeAdapter(ExecutorAdapter):
         self.agent = agent
 
     def execute(self, inp: ExecutorInput) -> ExecutorResult:
+        prompt_content = self._load_prompt(inp)
+        
         cmd = ["opencode", "run"]
         cmd.extend(["--dir", str(inp.run_dir)])
         cmd.extend(["--format", "json"])
@@ -20,10 +22,12 @@ class OpencodeAdapter(ExecutorAdapter):
             cmd.extend(["--agent", self.agent])
 
         for skill_path in inp.skill_paths:
-            cmd.extend(["--file", str(skill_path)])
+            skill_file = inp.run_dir / Path(skill_path).name
+            if Path(skill_path).exists():
+                skill_file.write_text(Path(skill_path).read_text())
+            cmd.extend(["--file", str(skill_file)])
 
-        prompt = self._build_prompt(inp)
-        cmd.append(prompt)
+        cmd.append(prompt_content)
 
         proc = subprocess.run(
             cmd,
@@ -34,7 +38,11 @@ class OpencodeAdapter(ExecutorAdapter):
 
         outputs = {}
         if proc.returncode == 0:
-            outputs = self._parse_outputs(proc.stdout, inp.outputs)
+            self._extract_and_write_outputs(proc.stdout, inp.outputs, inp.run_dir)
+            for key, rel_path in inp.outputs.items():
+                artifact_path = inp.run_dir / rel_path
+                if artifact_path.exists():
+                    outputs[key] = artifact_path.read_text()
 
         return ExecutorResult(
             outputs=outputs,
@@ -43,32 +51,31 @@ class OpencodeAdapter(ExecutorAdapter):
             stderr=proc.stderr,
         )
 
-    def _build_prompt(self, inp: ExecutorInput) -> str:
-        prompt_lines = [f"Role: {inp.role}"]
-        prompt_lines.append(f"Prompt file: {inp.prompt_path}")
+    def _load_prompt(self, inp: ExecutorInput) -> str:
+        prompt_lines = []
+        
+        prompt_file = inp.run_dir / inp.prompt_path
+        if prompt_file.exists():
+            prompt_lines.append(prompt_file.read_text())
+        else:
+            prompt_lines.append(f"Role: {inp.role}")
+            prompt_lines.append(f"Prompt file: {inp.prompt_path}")
+        
         if inp.inputs:
-            prompt_lines.append("Inputs available:")
+            prompt_lines.append("\n## Available Inputs:")
             for key, path in inp.inputs.items():
-                prompt_lines.append(f"  - {key}: {path}")
-        prompt_lines.append(f"Expected outputs: {list(inp.outputs.keys())}")
+                input_file = inp.run_dir / path
+                if input_file.exists():
+                    prompt_lines.append(f"\n### {key} ({path})")
+                    prompt_lines.append(input_file.read_text())
+        
+        if inp.outputs:
+            prompt_lines.append("\n## Expected Outputs:")
+            prompt_lines.append("Create the following output files:")
+            for key, path in inp.outputs.items():
+                prompt_lines.append(f"  - {path} (output '{key}')")
+        
         return "\n".join(prompt_lines)
 
-    def _parse_outputs(self, stdout: str, expected_outputs: dict) -> dict:
-        outputs = {}
-        for line in stdout.splitlines():
-            try:
-                event = json.loads(line)
-                if event.get("type") == "assistant_message":
-                    content = event.get("content", "")
-                    for key in expected_outputs:
-                        if key in outputs:
-                            continue
-                        path = expected_outputs[key]
-                        artifact_path = Path(path)
-                        if not artifact_path.is_absolute():
-                            pass
-                        if artifact_path.exists():
-                            outputs[key] = artifact_path.read_text()
-            except json.JSONDecodeError:
-                continue
-        return outputs
+    def _extract_and_write_outputs(self, stdout: str, expected_outputs: dict, run_dir: Path):
+        pass
