@@ -18,6 +18,19 @@ def test_upgrade_idempotent():
         config_dir = Path(tmp) / ".flows"
         config_dir.mkdir(parents=True)
         config_path = config_dir / "config.yaml"
-        config_path.write_text("framework_version: '0.1.0'\npreferred_executor: echo\n")
+        content = "framework_version: '0.1.0'\npreferred_executor: echo\n"
+        config_path.write_text(content)
         run_upgrade(tmp)
-        # Should print "Already at version" but not error
+        assert config_path.read_text() == content
+
+
+def test_upgrade_from_old_version():
+    with tempfile.TemporaryDirectory() as tmp:
+        config_dir = Path(tmp) / ".flows"
+        config_dir.mkdir(parents=True)
+        config_path = config_dir / "config.yaml"
+        config_path.write_text("framework_version: '0.0.0'\npreferred_executor: echo\n")
+        run_upgrade(tmp)
+        content = config_path.read_text()
+        assert "0.1.0" in content
+        assert "0.0.0" not in content
