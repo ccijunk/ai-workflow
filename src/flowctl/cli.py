@@ -1,4 +1,5 @@
 import click
+from .init_cmd import run_init
 
 
 @click.group()
@@ -7,8 +8,10 @@ def main():
 
 
 @main.command()
-def init():
-    click.echo("flowctl init — not implemented yet")
+@click.option("--target", default=None, help="Target directory")
+def init(target):
+    """Bootstrap .flows/ directory in the target project."""
+    run_init(target)
 
 
 @main.command()

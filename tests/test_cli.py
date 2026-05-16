@@ -6,7 +6,7 @@ def test_init_command():
     runner = CliRunner()
     result = runner.invoke(main, ["init"])
     assert result.exit_code == 0
-    assert "flowctl init" in result.output
+    assert "Initialized .flows/" in result.output
 
 
 def test_run_command():
