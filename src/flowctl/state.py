@@ -21,6 +21,7 @@ class WorkflowState:
     status: WorkflowStatus = WorkflowStatus.RUNNING
     pending_approval_for: Optional[str] = None
     pending_transition_from: Optional[str] = None
+    reject_counts: Optional[dict[str, int]] = None
 
 
 def save_state(
@@ -31,6 +32,7 @@ def save_state(
     status: WorkflowStatus = WorkflowStatus.RUNNING,
     pending_approval_for: Optional[str] = None,
     pending_transition_from: Optional[str] = None,
+    reject_counts: Optional[dict[str, int]] = None,
 ) -> None:
     state_file = run_dir / "state.json"
     state = WorkflowState(
@@ -41,6 +43,7 @@ def save_state(
         status=status,
         pending_approval_for=pending_approval_for,
         pending_transition_from=pending_transition_from,
+        reject_counts=reject_counts,
     )
     state_file.write_text(json.dumps({
         "current_node": state.current_node,
@@ -50,6 +53,7 @@ def save_state(
         "status": state.status.value if isinstance(state.status, WorkflowStatus) else state.status,
         "pending_approval_for": state.pending_approval_for,
         "pending_transition_from": state.pending_transition_from,
+        "reject_counts": state.reject_counts,
     }, indent=2))
 
 
@@ -70,6 +74,7 @@ def load_state(run_dir: Path) -> Optional[WorkflowState]:
             status=status,
             pending_approval_for=data.get("pending_approval_for"),
             pending_transition_from=data.get("pending_transition_from"),
+            reject_counts=data.get("reject_counts"),
         )
     except (json.JSONDecodeError, KeyError):
         return None
