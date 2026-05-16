@@ -98,6 +98,8 @@ class OpencodeAdapter(ExecutorAdapter):
             prompt_lines.append("\n## Available Inputs:")
             for key, path in inp.inputs.items():
                 input_file = inp.run_dir / path
+                if not input_file.exists() and inp.workflow_dir:
+                    input_file = inp.workflow_dir / path
                 if input_file.exists():
                     prompt_lines.append(f"\n### {key} ({path})")
                     prompt_lines.append(input_file.read_text())

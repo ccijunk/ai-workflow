@@ -4,16 +4,20 @@ Use bash tool to create a new git branch for the issue.
 
 ## Task
 
-Read requirement.md to understand what we're implementing.
+Read `requirement.md` to understand the issue title.
+Read `issue-url.txt` to get the issue URL and extract the issue number.
 
 The repo root is: /home/laeq/code/harness/ai-workflow
 
-## Execute these commands with bash tool:
+## Steps
 
-1. First check current branch and switch to main: `cd /home/laeq/code/harness/ai-workflow && git checkout main && git pull`
-2. Create new branch: `cd /home/laeq/code/harness/ai-workflow && git checkout -b issue-1-role-config`
-3. Push branch: `cd /home/laeq/code/harness/ai-workflow && git push -u origin issue-1-role-config`
+1. Extract issue number from the URL (e.g., `https://github.com/owner/repo/issues/10` → issue number is `10`)
+2. Create a branch name from the issue number and a slug derived from the issue title (e.g., issue #10 with title "Add mixed executor support" → `issue-10-mixed-executor-support`)
+3. Execute with bash tool:
+   - `git checkout main && git pull`
+   - `git checkout -b <branch-name>`
+   - `git push -u origin <branch-name>`
 
 ## Output
 
-Use write tool to create `branch-name.txt` with content: issue-1-role-config
+Use write tool to create `branch-name.txt` with the branch name you created.

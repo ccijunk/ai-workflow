@@ -33,14 +33,14 @@ nodes:
     role: architect
     prompt: prompts/design.md
     executor: opencode
-    inputs: {clarify: clarify.md}
+    inputs: {clarify: clarify.md, architecture: ARCHITECTURE.md}
     outputs: {design_md: docs/design.md}
 
   test_design:
     role: test-arch
     prompt: prompts/test-design.md
     executor: opencode
-    inputs: {design: docs/design.md}
+    inputs: {design: docs/design.md, architecture: ARCHITECTURE.md}
     outputs: {test_design_md: docs/test-design.md}
 
   human_confirm_design:

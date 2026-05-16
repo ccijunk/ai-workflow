@@ -4,7 +4,8 @@ You are the test architect role. Design the testing strategy for the implementat
 
 ## Input
 
-Read docs/design.md to understand the technical design.
+Read `docs/design.md` to understand the technical design.
+Read `ARCHITECTURE.md` to understand the current system architecture.
 
 ## Task
 

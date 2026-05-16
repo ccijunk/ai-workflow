@@ -4,7 +4,8 @@ You are the architect role. Create a technical design based on the clarified req
 
 ## Input
 
-Read the clarify.md file to understand the refined requirements.
+Read `clarify.md` to understand the refined requirements.
+Read `ARCHITECTURE.md` to understand the current system architecture.
 
 ## Task
 
