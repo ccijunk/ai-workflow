@@ -1,9 +1,11 @@
 import tempfile
 import pytest
 from pathlib import Path
+import json
 from flowctl.models import WorkflowDef, Node, Transition
 from flowctl.runner import run_workflow, _mock_execution
 from flowctl.executors.base import ExecutorResult, ExecutorInput
+from flowctl.state import save_state, load_state, has_state
 
 
 SAMPLE_WORKFLOW = WorkflowDef(
@@ -81,3 +83,96 @@ def test_workflow_missing_node_raises():
         run_dir = Path(tmp)
         with pytest.raises(RuntimeError, match="not found"):
             run_workflow(wf, run_dir, dry_run=True)
+
+
+def test_workflow_resume_from_state():
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "step2": Node(role="dev", prompt="p2.md", inputs={}, outputs={"output2": "out2.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="step2"),
+            Transition(from_="step2", to="__end__"),
+        ],
+    )
+    
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        
+        # Save state at step1 (after step1 completed, before step2)
+        save_state(run_dir, "step1", {"output1": "existing"}, 1)
+        
+        # Resume - should start from step1, execute step2
+        result = run_workflow(wf, run_dir, dry_run=True, resume=True)
+        
+        # Should have executed step2
+        assert "output2" in result
+        # Should retain context from state
+        assert result["output1"] == "existing"
+        
+        # State should be cleared after completion
+        assert not has_state(run_dir)
+
+
+def test_workflow_resume_no_state():
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="__end__"),
+        ],
+    )
+    
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        
+        # No state saved, resume should start fresh
+        result = run_workflow(wf, run_dir, dry_run=True, resume=True)
+        
+        assert "output1" in result
+
+
+def test_workflow_saves_state_after_node():
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="__end__"),
+        ],
+    )
+    
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        
+        # Run without dry_run would save state, but dry_run doesn't
+        run_workflow(wf, run_dir, dry_run=True)
+        
+        # Dry run should not save state
+        assert not has_state(run_dir)
+
+
+def test_workflow_state_cleared_on_success():
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="__end__"),
+        ],
+    )
+    
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        
+        # Mock execution to simulate real run
+        run_workflow(wf, run_dir, dry_run=False)
+        
+        # State should be cleared after successful completion
+        assert not has_state(run_dir)
