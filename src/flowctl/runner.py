@@ -20,7 +20,7 @@ def get_next_transitions(workflow: WorkflowDef, current: str, context: dict) -> 
             key = key.strip()
             expected = val.strip().strip('"\'')
             actual = context.get(key)
-            if actual == expected:
+            if actual and actual.strip().split('\n')[0] == expected:
                 results.append(t.to)
             continue
         results.append(t.to)
