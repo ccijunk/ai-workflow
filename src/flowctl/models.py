@@ -8,6 +8,7 @@ class FlowctlConfig(BaseModel):
 
 
 class Transition(BaseModel):
+    model_config = {"populate_by_name": True}
     from_: str = Field(alias="from")
     to: str
     when: Optional[str] = None
