@@ -69,24 +69,43 @@ flowchart TD
     D -->|No Match| F[Skip Transition]
     C -->|No| E
     F --> B
-    E --> G[Execute Node]
-    G --> H[Validate Artifacts]
-    H --> I{All Valid?}
-    I -->|Yes| J[Update Context]
-    I -->|No| K[Raise Error]
-    J --> L{Is __end__?}
-    L -->|No| A
-    L -->|Yes| M[Return Context]
+    E --> G{Human Node?}
+    G -->|Yes| H[Pause & Save State]
+    H --> I[Return - Await Approval]
+    G -->|No| J[Execute Node]
+    J --> K[Validate Artifacts]
+    K --> L{All Valid?}
+    L -->|Yes| M[Update Context]
+    L -->|No| N[Raise Error]
+    M --> O{Is __end__?}
+    O -->|No| A
+    O -->|Yes| P[Return Context]
+    I --> Q{Resume with Decision?}
+    Q -->|Approve| R[Write approval file]
+    Q -->|Reject| S[Write reject-reason.txt]
+    S --> T{Count <= MAX_REJECTS?}
+    T -->|Yes| U[Increment count]
+    T -->|No| V[Fail workflow]
+    U --> R
+    R --> J
 ```
 
 **Execution Flow:**
 1. Start at `__start__` pseudo-node
 2. Find matching transitions (evaluate `when` conditions against context)
-3. Execute node via executor adapter
-4. Validate output artifacts exist
-5. Update context with outputs
-6. Move to next node
-7. Repeat until `__end__`
+3. If human node: pause workflow, save state, await approval/reject
+4. Otherwise: execute node via executor adapter
+5. Validate output artifacts exist
+6. Update context with outputs
+7. Move to next node
+8. Repeat until `__end__`
+
+**Human Approval Flow:**
+- Human nodes pause execution and save state (status=PAUSED)
+- Resume with `--approve` or `--reject --reject-reason "<text>"`
+- Reject writes `reject-reason.txt` and tracks reject count per node
+- MAX_REJECTS=5 limit prevents infinite rejection loops
+- Revision nodes (reclarify, redesign) address feedback and return to approval
 
 **V1 Limitations:**
 - Only first matching transition used (no branch fan-out)
@@ -147,16 +166,58 @@ classDiagram
 Commands:
 - `flowctl init`: Bootstrap `.flows/` directory
 - `flowctl upgrade`: Reconcile config for framework updates
+- `flowctl status`: Show workflow run status (PAUSED, current node, reject counts)
 - `flowctl run`: Execute workflow
   - `--dry-run`: Mock execution
   - `--executor`: echo/opencode
   - `--model`: Model override
   - `--agent`: Agent name
   - `--issue`: GitHub issue URL (adds to context)
+  - `--resume`: Resume from saved state
+  - `--approve`: Approve pending human node (requires --resume)
+  - `--reject`: Reject pending human node (requires --resume)
+  - `--reject-reason`: Reason for rejection (required with --reject)
 
 ### 6. Artifact Validator (`artifact_validator.py`)
 
 Validates that output artifacts exist after node execution. Checks file paths declared in `outputs`.
+
+### 7. State Management (`state.py`)
+
+```mermaid
+classDiagram
+    class WorkflowStatus {
+        <<enumeration>>
+        RUNNING
+        PAUSED
+        COMPLETED
+        FAILED
+    }
+    
+    class WorkflowState {
+        string current_node
+        dict~string, string~ context
+        int iterations
+        string timestamp
+        WorkflowStatus status
+        string pending_approval_for
+        string pending_transition_from
+        dict~string, int~ reject_counts
+    }
+    
+    WorkflowState --> WorkflowStatus
+```
+
+**State Persistence:**
+- Saved to `.flows/runs/<run-id>/state.json` after each node
+- Used for pause/resume: human nodes save PAUSED state
+- `reject_counts`: Tracks reject attempts per approval node (max 5)
+
+**State Operations:**
+- `save_state()`: Persist workflow state to JSON
+- `load_state()`: Restore workflow state from JSON
+- `has_state()`: Check if state file exists
+- `clear_state()`: Remove state file on completion
 
 ## Directory Structure
 
@@ -170,7 +231,9 @@ Validates that output artifacts exist after node execution. Checks file paths de
 ├── prompts/
 │   ├── fetch-issue.md
 │   ├── create-branch-issue.md
-│   ├── *.md              # Node prompts
+│   ├── reclarify.md        # BA revises clarify based on feedback
+│   ├── redesign.md         # Architect revises design based on feedback
+│   ├── *.md                # Node prompts
 ├── roles/
 │   ├── fetcher.yaml
 │   ├── developer.yaml
@@ -185,6 +248,7 @@ src/flowctl/
 ├── loader.py             # YAML loader/validator
 ├── models.py             # Pydantic models
 ├── runner.py             # Workflow execution engine
+├── state.py              # Workflow state persistence
 ├── artifact_validator.py # Output validation
 ├── init_cmd.py           # `init` command
 ├── upgrade_cmd.py        # `upgrade` command
@@ -234,11 +298,13 @@ stateDiagram-v2
     create_branch --> clarify
     clarify --> human_confirm_clarify
     human_confirm_clarify --> design: clarify_approved == "yes"
-    human_confirm_clarify --> clarify: clarify_approved == "no"
+    human_confirm_clarify --> reclarify: clarify_approved == "no"
+    reclarify --> human_confirm_clarify
     design --> test_design
     test_design --> human_confirm_design
     human_confirm_design --> explore: design_approved == "yes"
-    human_confirm_design --> clarify: design_approved == "no"
+    human_confirm_design --> redesign: design_approved == "no"
+    redesign --> human_confirm_design
     explore --> coding
     coding --> modify
     modify --> testing
@@ -252,6 +318,13 @@ stateDiagram-v2
     create_pr --> [*]
 ```
 
+**Reject-Reason Flow:**
+- Human rejects with `--reject --reject-reason "<feedback>"`
+- Workflow transitions to revision node (reclarify or redesign)
+- Revision node addresses specific feedback, outputs updated artifact
+- Workflow returns to same approval node for re-evaluation
+- Reject count tracked per approval node (max 5 attempts)
+
 ## Key Design Decisions
 
 1. **YAML-based workflow definition**: Declarative, versionable, human-readable
@@ -261,6 +334,8 @@ stateDiagram-v2
 5. **Conditional transitions**: `when` guards enable branching logic
 6. **Session cleanup**: Opencode executor deletes sessions after each node to prevent accumulation
 7. **Absolute paths**: Required for subprocess cwd to avoid path resolution failures
+8. **Human approval with feedback**: Reject requires reason, revision nodes address feedback
+9. **Reject count limits**: MAX_REJECTS=5 prevents infinite approval loops
 
 ## Dependencies
 
@@ -272,7 +347,7 @@ stateDiagram-v2
 ## Current Limitations
 
 1. Single transition per step (no parallel branches)
-2. No retry logic on node failure
-3. No pause/resume for long-running workflows
-4. No workflow composition (calling other workflows)
-5. File-based artifacts only (no database/API integration)
+2. No retry logic on node failure (except human approval loops)
+3. No workflow composition (calling other workflows)
+4. File-based artifacts only (no database/API integration)
+5. Human approval nodes only (no other pause types)
