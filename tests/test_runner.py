@@ -342,3 +342,82 @@ def test_workflow_resume_paused_without_approval_raises(tmp_path):
     # Resume without approval should raise
     with pytest.raises(click.exceptions.Abort):
         run_workflow(wf, tmp_path, dry_run=False, resume=True)
+
+
+def test_workflow_resume_with_reject_reason(tmp_path):
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="__end__", when="approved == 'no'"),
+        ],
+    )
+    
+    from flowctl.state import save_state, WorkflowStatus
+    
+    save_state(tmp_path, "human_approval", {"output1": "existing"}, 1, 
+               status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1",
+               reject_counts={"human_approval": 0})
+    
+    # Resume with reject and reason
+    result = run_workflow(wf, tmp_path, dry_run=False, resume=True, approval_decision="no", reject_reason="Missing details")
+    
+    assert "approved" in result
+    assert result["approved"] == "no"
+    
+    # Check reject-reason.txt was written
+    reject_reason_file = tmp_path / "reject-reason.txt"
+    assert reject_reason_file.exists()
+    assert reject_reason_file.read_text() == "Missing details"
+
+
+def test_workflow_reject_reason_validation_empty(tmp_path):
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="__end__"),
+        ],
+    )
+    
+    from flowctl.state import save_state, WorkflowStatus
+    
+    save_state(tmp_path, "human_approval", {"output1": "existing"}, 1, 
+               status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1")
+    
+    # Resume with empty reject reason should fail
+    with pytest.raises(click.exceptions.Abort):
+        run_workflow(wf, tmp_path, dry_run=False, resume=True, approval_decision="no", reject_reason="")
+
+
+def test_workflow_reject_count_exceeds_limit(tmp_path):
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="__end__", when="approved == 'no'"),
+        ],
+    )
+    
+    from flowctl.state import save_state, WorkflowStatus
+    
+    # Save state with reject count at limit (5)
+    save_state(tmp_path, "human_approval", {"output1": "existing"}, 1, 
+               status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1",
+               reject_counts={"human_approval": 5})
+    
+    # Resume with reject should fail (exceeds 5)
+    with pytest.raises(click.exceptions.Abort):
+        run_workflow(wf, tmp_path, dry_run=False, resume=True, approval_decision="no", reject_reason="Another rejection")
