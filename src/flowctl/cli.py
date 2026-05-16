@@ -39,6 +39,10 @@ def run(dry_run, executor, workflow, run_id):
     run_dir = Path(".flows/runs") / (run_id or "latest")
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    if executor != "echo":
+        click.echo(f"Executor '{executor}' not yet supported (v1 only supports 'echo')", err=True)
+        raise click.Abort()
+
     adapter = EchoAdapter()
     result = run_workflow(wf, run_dir, adapter=adapter, dry_run=dry_run)
     click.echo(f"Run complete. Context: {result}")

@@ -4,14 +4,7 @@ from .executors import ExecutorAdapter, EchoAdapter
 from .executors.base import ExecutorInput, ExecutorResult
 from .artifact_validator import validate_artifacts
 
-
-class RunContext:
-    def __init__(self, run_dir: Path, workflow: WorkflowDef, dry_run: bool = False):
-        self.run_dir = run_dir
-        self.workflow = workflow
-        self.dry_run = dry_run
-        self.outputs: dict[str, dict[str, str]] = {}
-        self.artifacts: dict[str, str] = {}
+MAX_ITERATIONS = 100
 
 
 def get_next_transitions(workflow: WorkflowDef, current: str, context: dict) -> list[str]:
@@ -41,19 +34,27 @@ def run_workflow(
     adapter = adapter or EchoAdapter()
     context: dict[str, str] = {}
     current = "__start__"
+    iterations = 0
 
     while current != "__end__":
+        iterations += 1
+        if iterations > MAX_ITERATIONS:
+            raise RuntimeError(f"Workflow exceeded {MAX_ITERATIONS} iterations - possible cycle")
+
         next_nodes = get_next_transitions(workflow, current, context)
         if not next_nodes:
-            break
+            raise RuntimeError(f"No valid transitions from '{current}'")
 
         next_node = next_nodes[0]
+        if len(next_nodes) > 1:
+            pass
+
         if next_node == "__end__":
             break
 
         node_def = workflow.nodes.get(next_node)
         if not node_def:
-            break
+            raise RuntimeError(f"Node '{next_node}' not found in workflow definition")
 
         inp = ExecutorInput(
             role=node_def.role,

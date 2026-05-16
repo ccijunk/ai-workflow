@@ -1,4 +1,5 @@
 import tempfile
+import pytest
 from pathlib import Path
 from flowctl.models import WorkflowDef, Node, Transition
 from flowctl.runner import run_workflow, _mock_execution
@@ -28,7 +29,25 @@ def test_run_workflow_dry_run():
         assert "spec" in result
 
 
-def test_workflow_loops():
+def test_workflow_conditional_transition():
+    wf = WorkflowDef(
+        nodes={
+            "planner": Node(role="planner", prompt="p.md", inputs={}, outputs={}),
+            "critic": Node(role="critic", prompt="c.md", inputs={}, outputs={"ok": "ok.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="planner"),
+            Transition(from_="planner", to="critic"),
+            Transition(from_="critic", to="__end__"),
+        ],
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        result = run_workflow(wf, run_dir, dry_run=True)
+        assert isinstance(result, dict)
+
+
+def test_workflow_no_matching_transition_raises():
     wf = WorkflowDef(
         nodes={
             "planner": Node(role="planner", prompt="p.md", inputs={}, outputs={}),
@@ -43,5 +62,21 @@ def test_workflow_loops():
     )
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)
-        result = run_workflow(wf, run_dir, dry_run=True)
-        assert isinstance(result, dict)
+        with pytest.raises(RuntimeError, match="No valid transitions"):
+            run_workflow(wf, run_dir, dry_run=True)
+
+
+def test_workflow_missing_node_raises():
+    wf = WorkflowDef(
+        nodes={
+            "planner": Node(role="planner", prompt="p.md", inputs={}, outputs={}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="planner"),
+            Transition(from_="planner", to="nonexistent"),
+        ],
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        with pytest.raises(RuntimeError, match="not found"):
+            run_workflow(wf, run_dir, dry_run=True)
