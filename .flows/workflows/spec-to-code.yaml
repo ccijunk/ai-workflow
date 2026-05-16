@@ -8,6 +8,13 @@ nodes:
     inputs: {issue_url: issue-url.txt}
     outputs: {requirement: requirement.md}
 
+  create_branch:
+    role: pr-creator
+    prompt: prompts/create-branch-issue.md
+    executor: opencode
+    inputs: {requirement: requirement.md, repo_root: repo-root.txt}
+    outputs: {branch_name: branch-name.txt}
+
   clarify:
     role: ba
     prompt: prompts/clarity.md
@@ -57,6 +64,13 @@ nodes:
     inputs: {explore: explore.md, test_design: docs/test-design.md}
     outputs: {implementation_md: implementation.md}
 
+  modify:
+    role: developer
+    prompt: prompts/modify-code.md
+    executor: opencode
+    inputs: {requirement: requirement.md, repo_root: repo-root.txt, branch_name: branch-name.txt, implementation: implementation.md}
+    outputs: {changes: changes.md}
+
   testing:
     role: tester
     prompt: prompts/testing.md
@@ -94,9 +108,9 @@ nodes:
 
   create_pr:
     role: pr-creator
-    prompt: prompts/create-pr.md
+    prompt: prompts/create-pr-issue.md
     executor: opencode
-    inputs: {implementation: implementation.md, review: review.md, reflect: pending.diff}
+    inputs: {requirement: requirement.md, branch_name: branch-name.txt, repo_root: repo-root.txt, implementation: implementation.md, review: review.md}
     outputs: {pr_url: pr-url.txt}
 
 transitions:
@@ -104,6 +118,9 @@ transitions:
     to: fetch_issue
 
   - from: fetch_issue
+    to: create_branch
+
+  - from: create_branch
     to: clarify
 
   - from: clarify
@@ -135,6 +152,9 @@ transitions:
     to: coding
 
   - from: coding
+    to: modify
+
+  - from: modify
     to: testing
 
   - from: testing
@@ -146,7 +166,7 @@ transitions:
     when: pass == "no"
 
   - from: fix_test
-    to: testing
+    to: modify
 
   - from: review
     to: reflect
@@ -157,7 +177,7 @@ transitions:
     when: verdict == "FAIL"
 
   - from: fix_review
-    to: testing
+    to: modify
 
   - from: reflect
     to: create_pr

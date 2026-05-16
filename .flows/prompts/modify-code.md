@@ -1,25 +1,18 @@
 # Modify Code
 
-Implement the requirement from issue #1: add role binding config, add role prompt.
+Commit the implementation changes to the git branch.
 
 ## Task
 
-Read requirement.md to understand what needs to be implemented.
+Read requirement.md and implementation.md to understand what was implemented.
 
-The requirement is to add:
-1. Role binding configuration (role can have bindings for specific nodes)
-2. Role prompt system (prompt resolution: node → role binding → role default)
-
-## Implementation
-
-Modify the following files:
-1. `src/flowctl/models.py` - add RoleBinding model and update RoleConfig
-2. Create role config files in `.flows/roles/` directory
+The repo root is: /home/laeq/code/harness/ai-workflow
+The branch name is in branch-name.txt
 
 ## Execute with bash tool:
 
 1. `cd /home/laeq/code/harness/ai-workflow && git add -A`
-2. `cd /home/laeq/code/harness/ai-workflow && git commit -m "feat: implement role binding config from issue #1"`
+2. `cd /home/laeq/code/harness/ai-workflow && git commit -m "feat: implement requirement from workflow"`
 
 ## Output
 
