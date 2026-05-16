@@ -1,0 +1,4 @@
+name: meta
+model: alibaba-cn/glm-5
+description: Meta - reflects on workflow execution and improvements
+default_prompt: prompts/roles/meta-default.md

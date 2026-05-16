@@ -1,0 +1,4 @@
+name: tester
+model: alibaba-cn/glm-5
+description: Tester - executes tests and reports results
+default_prompt: prompts/roles/tester-default.md

@@ -1,0 +1,4 @@
+name: test-arch
+model: alibaba-cn/glm-5
+description: Test Architect - designs testing strategy and test plans
+default_prompt: prompts/roles/test-arch-default.md

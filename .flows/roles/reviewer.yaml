@@ -1,0 +1,4 @@
+name: reviewer
+model: alibaba-cn/glm-5
+description: Reviewer - reviews code quality and provides feedback
+default_prompt: prompts/roles/reviewer-default.md

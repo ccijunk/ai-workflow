@@ -1,0 +1,4 @@
+name: human
+model: alibaba-cn/glm-5
+description: Human Gate - approval checkpoints for human review
+default_prompt: prompts/roles/human-default.md

@@ -1,0 +1,4 @@
+name: architect
+model: alibaba-cn/glm-5
+description: Architect - designs system architecture and solutions
+default_prompt: prompts/roles/architect-default.md
