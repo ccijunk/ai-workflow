@@ -87,6 +87,7 @@ def _mock_execution(inp: ExecutorInput, node_def) -> ExecutorResult:
         "pass": "yes",
         "verdict": "PASS",
         "ok": "pass",
+        "approved": "yes",
     }
     for key, path_str in node_def.outputs.items():
         artifact_path = inp.run_dir / path_str

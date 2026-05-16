@@ -22,6 +22,13 @@ nodes:
     inputs: {design: docs/design.md}
     outputs: {test_design_md: docs/test-design.md}
 
+  human_confirm:
+    role: human
+    prompt: prompts/human-confirm.md
+    executor: opencode
+    inputs: {design: docs/design.md, test_design: docs/test-design.md}
+    outputs: {approved: approved.txt}
+
   explore:
     role: developer
     prompt: prompts/explore.md
@@ -82,7 +89,15 @@ transitions:
     to: test_design
 
   - from: test_design
+    to: human_confirm
+
+  - from: human_confirm
     to: explore
+    when: approved == "yes"
+
+  - from: human_confirm
+    to: clarify
+    when: approved == "no"
 
   - from: explore
     to: coding
