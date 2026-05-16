@@ -1,21 +1,24 @@
 # Clarify Requirements
 
-Task: Add role configuration system to flowctl
+You are the business analyst role. Clarify and refine the requirements.
 
-## Requirements to Clarify
+## Input
 
-1. Change clarify node role from "architect" to "ba" (Business Analyst)
-2. Add role configuration system:
-   - Role has a model binding (e.g., ba uses glm-5, architect uses deepseek)
-   - Role has default prompt template
-   - Roles defined in `.flows/roles/<role>.yaml`
+Read the requirement from `requirement.md` in the run directory.
 
-## Questions
+## Task
 
-1. What roles need configuration?
-2. What models should each role use?
-3. Should role configs be loaded at workflow level or global level?
+1. Analyze the requirement
+2. Identify ambiguities or missing details
+3. Break down into specific sub-requirements
+4. Define acceptance criteria
+5. Identify dependencies
 
 ## Output
 
-Write clarification notes to `clarify.md`.
+Write clarified requirements to `clarify.md` with:
+- Requirement summary
+- Sub-requirements breakdown
+- Acceptance criteria
+- Dependencies identified
+- Questions/suggestions for stakeholder
