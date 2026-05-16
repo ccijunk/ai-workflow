@@ -1,0 +1,4 @@
+name: ba
+model: alibaba-cn/glm-5
+description: Business Analyst - clarifies requirements and scope
+default_prompt: prompts/roles/ba-default.md

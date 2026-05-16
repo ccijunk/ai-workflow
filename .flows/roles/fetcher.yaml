@@ -1,0 +1,4 @@
+name: fetcher
+model: alibaba-cn/glm-5
+description: Fetcher - retrieves requirements from external sources
+default_prompt: prompts/roles/fetcher-default.md

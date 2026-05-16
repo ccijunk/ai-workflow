@@ -1,11 +1,18 @@
 version: "1"
 
 nodes:
-  clarify:
-    role: architect
-    prompt: prompts/clarity.md
+  fetch_issue:
+    role: fetcher
+    prompt: prompts/fetch-issue.md
     executor: opencode
     inputs: {}
+    outputs: {requirement: requirement.md}
+
+  clarify:
+    role: ba
+    prompt: prompts/clarity.md
+    executor: opencode
+    inputs: {requirement: requirement.md}
     outputs: {clarify_md: clarify.md}
 
   human_confirm_clarify:
@@ -87,6 +94,9 @@ nodes:
 
 transitions:
   - from: __start__
+    to: fetch_issue
+
+  - from: fetch_issue
     to: clarify
 
   - from: clarify
