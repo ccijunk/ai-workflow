@@ -25,7 +25,7 @@ nodes:
   human_confirm_clarify:
     role: human
     prompt: prompts/human-confirm-clarify.md
-    executor: opencode
+    executor: human
     inputs: {clarify: clarify.md}
     outputs: {clarify_approved: clarify-approved.txt}
 
@@ -118,6 +118,7 @@ transitions:
 
   - from: clarify
     to: human_confirm_clarify
+    pause: true
 
   - from: human_confirm_clarify
     to: design
@@ -132,6 +133,7 @@ transitions:
 
   - from: test_design
     to: human_confirm_design
+    pause: true
 
   - from: human_confirm_design
     to: explore
