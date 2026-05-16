@@ -132,8 +132,7 @@ def run_workflow(
                 pending_approval_for=approval_key,
                 pending_transition_from=prev_node,
             )
-            inputs_display = {k: v for k, v in node_def.inputs.items()} if node_def.inputs else {}
-            logger.log_pause(next_node, inputs_display)
+            logger.log_pause(next_node, node_def.inputs or {})
             click.echo(f"Workflow paused at '{next_node}'. Approve: flowctl run --resume --approve | Reject: flowctl run --resume --reject")
             return context
 

@@ -202,3 +202,55 @@ def test_workflow_pauses_at_human_node(tmp_path):
     assert state.status == WorkflowStatus.PAUSED
     assert state.current_node == "human_approval"
     assert state.pending_approval_for == "approved"
+    assert state.pending_transition_from == "step1"
+
+
+def test_workflow_human_node_with_dry_run_does_not_pause(tmp_path):
+    from flowctl.state import WorkflowStatus
+    
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"output2": "out2.md"}),
+            "step2": Node(role="dev", prompt="p3.md", inputs={}, outputs={"output3": "out3.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="step2"),
+            Transition(from_="step2", to="__end__"),
+        ],
+    )
+    
+    result = run_workflow(wf, tmp_path, dry_run=True)
+    
+    assert "output2" in result
+    assert "output3" in result
+    assert not has_state(tmp_path)
+
+
+def test_workflow_human_node_without_outputs(tmp_path):
+    from flowctl.state import WorkflowStatus
+    
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={}),
+            "step2": Node(role="dev", prompt="p3.md", inputs={}, outputs={"output2": "out2.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="step2"),
+            Transition(from_="step2", to="__end__"),
+        ],
+    )
+    
+    result = run_workflow(wf, tmp_path, dry_run=False)
+    
+    state = load_state(tmp_path)
+    assert state is not None
+    assert state.status == WorkflowStatus.PAUSED
+    assert state.current_node == "human_approval"
+    assert state.pending_approval_for is None
+    assert state.pending_transition_from == "step1"
