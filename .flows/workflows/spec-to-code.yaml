@@ -46,7 +46,7 @@ nodes:
   human_confirm_design:
     role: human
     prompt: prompts/human-confirm-design.md
-    executor: opencode
+    executor: human
     inputs: {design: docs/design.md, test_design: docs/test-design.md}
     outputs: {design_approved: design-approved.txt}
 
@@ -118,7 +118,6 @@ transitions:
 
   - from: clarify
     to: human_confirm_clarify
-    pause: true
 
   - from: human_confirm_clarify
     to: design
@@ -133,7 +132,6 @@ transitions:
 
   - from: test_design
     to: human_confirm_design
-    pause: true
 
   - from: human_confirm_design
     to: explore

@@ -5,7 +5,7 @@ from .executors import ExecutorAdapter, EchoAdapter, ExecutorRegistry, create_de
 from .executors.base import ExecutorInput, ExecutorResult
 from .artifact_validator import validate_artifacts
 from .logger import WorkflowLogger
-from .state import save_state, load_state, has_state, clear_state
+from .state import save_state, load_state, has_state, clear_state, WorkflowStatus
 
 MAX_ITERATIONS = 100
 
