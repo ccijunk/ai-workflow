@@ -33,8 +33,10 @@ def upgrade(target):
 @click.option("--agent", default=None, help="Agent name for executor")
 @click.option("--run-id", default=None)
 @click.option("--issue", default=None, help="GitHub issue URL to process")
+@click.option("--log-level", default="INFO", help="Log level: DEBUG, INFO, WARNING, ERROR")
+@click.option("--log-format", default="json", help="Log format: json, text")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(dry_run, executor, model, agent, workflow, run_id, issue):
+def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -66,6 +68,6 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue):
         issue_file.write_text(issue)
 
     result = run_workflow(
-        wf, run_dir, adapter=adapter, dry_run=dry_run, initial_context=initial_context, workflow_dir=wf_path.parent.parent
+        wf, run_dir, adapter=adapter, dry_run=dry_run, initial_context=initial_context, workflow_dir=wf_path.parent.parent, log_level=log_level, log_format=log_format
     )
     click.echo(f"Run complete. Context: {result}")
