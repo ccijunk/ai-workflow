@@ -7,11 +7,16 @@ class FlowctlConfig(BaseModel):
     framework_version: str = "0.1.0"
 
 
+class RoleBinding(BaseModel):
+    prompt: str
+
+
 class RoleConfig(BaseModel):
     name: str
     model: str
     description: Optional[str] = None
     default_prompt: Optional[str] = None
+    bindings: dict[str, RoleBinding] = Field(default_factory=dict)
 
 
 class Transition(BaseModel):

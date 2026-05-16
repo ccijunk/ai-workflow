@@ -2,3 +2,8 @@ name: developer
 model: alibaba-cn/glm-5
 description: Developer - implements code and fixes issues
 default_prompt: prompts/roles/developer-default.md
+bindings:
+  implement:
+    prompt: prompts/roles/developer-implement.md
+  fix:
+    prompt: prompts/roles/developer-fix.md
