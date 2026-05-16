@@ -4,6 +4,7 @@ from .executors import ExecutorAdapter, EchoAdapter
 from .executors.base import ExecutorInput, ExecutorResult
 from .artifact_validator import validate_artifacts
 from .logger import WorkflowLogger
+from .state import save_state, load_state, has_state, clear_state
 
 MAX_ITERATIONS = 100
 
@@ -35,6 +36,7 @@ def run_workflow(
     workflow_dir: Path | None = None,
     log_level: str = "INFO",
     log_format: str = "json",
+    resume: bool = False,
 ) -> dict[str, str]:
     adapter = adapter or EchoAdapter()
     context: dict[str, str] = initial_context or {}
@@ -44,6 +46,15 @@ def run_workflow(
     run_id = run_dir.name
     logger = WorkflowLogger(run_id, run_dir, log_level, log_format)
     logger.log_workflow_start(workflow=str(workflow_dir) if workflow_dir else "unknown", executor=adapter.__class__.__name__, initial_context=initial_context)
+
+    if resume and has_state(run_dir):
+        state = load_state(run_dir)
+        if state:
+            current = state.current_node
+            context = state.context
+            iterations = state.iterations
+
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     while current != "__end__":
         iterations += 1
@@ -98,6 +109,11 @@ def run_workflow(
             context.update(result.outputs)
 
         current = next_node
+        
+        if not dry_run:
+            save_state(run_dir, current, context, iterations)
+
+    clear_state(run_dir)
 
     logger.log_workflow_end("completed")
     return context
