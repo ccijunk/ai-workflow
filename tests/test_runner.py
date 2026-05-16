@@ -176,3 +176,29 @@ def test_workflow_state_cleared_on_success():
         
         # State should be cleared after successful completion
         assert not has_state(run_dir)
+
+
+def test_workflow_pauses_at_human_node(tmp_path):
+    from flowctl.state import WorkflowStatus
+    
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+            "step2": Node(role="dev", prompt="p3.md", inputs={}, outputs={"output2": "out2.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="step2", when="approved == 'yes'"),
+            Transition(from_="step2", to="__end__"),
+        ],
+    )
+    
+    result = run_workflow(wf, tmp_path, dry_run=False)
+    
+    state = load_state(tmp_path)
+    assert state is not None
+    assert state.status == WorkflowStatus.PAUSED
+    assert state.current_node == "human_approval"
+    assert state.pending_approval_for == "approved"

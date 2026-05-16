@@ -1,5 +1,6 @@
 from pathlib import Path
 import yaml
+import click
 from .models import WorkflowDef, Node, FlowctlConfig
 from .executors import ExecutorAdapter, EchoAdapter, ExecutorRegistry, create_default_registry
 from .executors.base import ExecutorInput, ExecutorResult
@@ -120,13 +121,28 @@ def run_workflow(
 
         logger.log_node_start(next_node, node_def.role, node_def.prompt, node_def.skills, node_def.inputs)
 
+        executor_name = resolve_executor(node_def, default_executor, config) if adapter is None else adapter.__class__.__name__
+
+        if executor_name == "human" and not dry_run:
+            approval_key = list(node_def.outputs.keys())[0] if node_def.outputs else None
+            prev_node = current
+            save_state(
+                run_dir, next_node, context, iterations,
+                status=WorkflowStatus.PAUSED,
+                pending_approval_for=approval_key,
+                pending_transition_from=prev_node,
+            )
+            inputs_display = {k: v for k, v in node_def.inputs.items()} if node_def.inputs else {}
+            logger.log_pause(next_node, inputs_display)
+            click.echo(f"Workflow paused at '{next_node}'. Approve: flowctl run --resume --approve | Reject: flowctl run --resume --reject")
+            return context
+
         if dry_run:
             result = _mock_execution(inp, node_def)
         else:
             if adapter is not None:
                 node_adapter = adapter
             else:
-                executor_name = resolve_executor(node_def, default_executor, config)
                 cfg = executor_config.get(executor_name, {}) if executor_config else {}
                 node_adapter = registry.get(executor_name, **cfg)
             result = node_adapter.execute(inp)
