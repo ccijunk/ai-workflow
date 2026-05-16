@@ -7,6 +7,13 @@ class FlowctlConfig(BaseModel):
     framework_version: str = "0.1.0"
 
 
+class RoleConfig(BaseModel):
+    name: str
+    model: str
+    description: Optional[str] = None
+    default_prompt: Optional[str] = None
+
+
 class Transition(BaseModel):
     model_config = {"populate_by_name": True}
     from_: str = Field(alias="from")
@@ -29,3 +36,4 @@ class WorkflowDef(BaseModel):
     version: str = "1"
     nodes: dict[str, Node]
     transitions: list[Transition]
+    roles: Optional[dict[str, RoleConfig]] = None

@@ -4,7 +4,7 @@ Fetch the requirement from GitHub issue and write to output.
 
 ## Task
 
-Fetch requirement from: https://github.com/ccijunk/ai-workflow/issues/1
+Read the issue URL from `issue-url.txt` and fetch the requirement content.
 
 Extract the requirement description and write it to `requirement.md`.
 

@@ -1,0 +1,2 @@
+preferred_executor: echo
+framework_version: '0.1.0'

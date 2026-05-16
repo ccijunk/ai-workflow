@@ -5,7 +5,7 @@ nodes:
     role: fetcher
     prompt: prompts/fetch-issue.md
     executor: opencode
-    inputs: {}
+    inputs: {issue_url: issue-url.txt}
     outputs: {requirement: requirement.md}
 
   clarify:

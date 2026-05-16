@@ -30,9 +30,10 @@ def run_workflow(
     run_dir: Path,
     adapter: ExecutorAdapter | None = None,
     dry_run: bool = False,
+    initial_context: dict[str, str] | None = None,
 ) -> dict[str, str]:
     adapter = adapter or EchoAdapter()
-    context: dict[str, str] = {}
+    context: dict[str, str] = initial_context or {}
     current = "__start__"
     iterations = 0
 
@@ -89,6 +90,8 @@ def _mock_execution(inp: ExecutorInput, node_def) -> ExecutorResult:
         "ok": "pass",
         "clarify_approved": "yes",
         "design_approved": "yes",
+        "requirement": "mock requirement: add role binding config, add role prompt",
+        "pr_url": "https://github.com/ccijunk/ai-workflow/pull/1",
     }
     for key, path_str in node_def.outputs.items():
         artifact_path = inp.run_dir / path_str

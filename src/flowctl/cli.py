@@ -32,8 +32,9 @@ def upgrade(target):
 @click.option("--model", default=None, help="Model for executor (e.g., alibaba-cn/glm-5)")
 @click.option("--agent", default=None, help="Agent name for executor")
 @click.option("--run-id", default=None)
+@click.option("--issue", default=None, help="GitHub issue URL to process")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(dry_run, executor, model, agent, workflow, run_id):
+def run(dry_run, executor, model, agent, workflow, run_id, issue):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -58,5 +59,11 @@ def run(dry_run, executor, model, agent, workflow, run_id):
         click.echo("Available executors: echo, opencode", err=True)
         raise click.Abort()
 
-    result = run_workflow(wf, run_dir, adapter=adapter, dry_run=dry_run)
+    initial_context = {}
+    if issue:
+        initial_context["issue_url"] = issue
+        issue_file = run_dir / "issue-url.txt"
+        issue_file.write_text(issue)
+
+    result = run_workflow(wf, run_dir, adapter=adapter, dry_run=dry_run, initial_context=initial_context)
     click.echo(f"Run complete. Context: {result}")
