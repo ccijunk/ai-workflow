@@ -26,13 +26,10 @@ Creates `.flows/` directory structure:
 
 ```bash
 # Dry run (mock execution)
-flowctl run .flows/workflows/hello-world.yaml --dry-run
+uv run flowctl run .flows/workflows/hello-world.yaml --dry-run
 
-# Run with opencode executor
-flowctl run .flows/workflows/spec-to-code.yaml --executor opencode
-
-# Run with a GitHub issue
-flowctl run .flows/workflows/spec-to-code.yaml --executor opencode --issue https://github.com/user/repo/issues/1
+# Run with opencode executor on a GitHub issue
+uv run flowctl run --executor opencode --issue "https://github.com/ccijunk/ai-workflow/issues/10" --run-id issue-10 .flows/workflows/spec-to-code.yaml
 ```
 
 ### Resume a workflow
