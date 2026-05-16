@@ -169,3 +169,14 @@ class WorkflowLogger:
             inputs=context,
         )
         self._write(entry)
+    
+    def log_pause(self, node_id: str, inputs: dict = None):
+        entry = LogEntry(
+            timestamp=self._timestamp(),
+            level="INFO",
+            run_id=self.run_id,
+            event="pause",
+            node=node_id,
+            inputs=inputs,
+        )
+        self._write(entry)
