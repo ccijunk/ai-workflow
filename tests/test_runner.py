@@ -454,6 +454,14 @@ def test_workflow_reject_flows_to_reclarify(tmp_path):
     assert state.status == WorkflowStatus.PAUSED
     assert state.current_node == "human_approval"
     assert state.reject_counts == {"human_approval": 1}
+    
+    # Check reject-reason.txt was written
+    reject_reason_file = tmp_path / "reject-reason.txt"
+    assert reject_reason_file.exists()
+    assert "Needs revision" in reject_reason_file.read_text()
+    
+    # Verify revision node executed (output2 exists)
+    assert "output2" in state.context
 
 
 def test_workflow_multiple_reject_cycles(tmp_path):
