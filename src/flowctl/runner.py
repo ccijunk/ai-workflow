@@ -1,0 +1,91 @@
+from pathlib import Path
+from .models import WorkflowDef
+from .executors import ExecutorAdapter, EchoAdapter
+from .executors.base import ExecutorInput, ExecutorResult
+from .artifact_validator import validate_artifacts
+
+
+class RunContext:
+    def __init__(self, run_dir: Path, workflow: WorkflowDef, dry_run: bool = False):
+        self.run_dir = run_dir
+        self.workflow = workflow
+        self.dry_run = dry_run
+        self.outputs: dict[str, dict[str, str]] = {}
+        self.artifacts: dict[str, str] = {}
+
+
+def get_next_transitions(workflow: WorkflowDef, current: str, context: dict) -> list[str]:
+    candidates = [t for t in workflow.transitions if t.from_ == current]
+    if not candidates:
+        return []
+    results = []
+    for t in candidates:
+        if t.when:
+            key, _, val = t.when.partition(" == ")
+            key = key.strip()
+            expected = val.strip().strip('"\'')
+            actual = context.get(key)
+            if actual == expected:
+                results.append(t.to)
+            continue
+        results.append(t.to)
+    return results
+
+
+def run_workflow(
+    workflow: WorkflowDef,
+    run_dir: Path,
+    adapter: ExecutorAdapter | None = None,
+    dry_run: bool = False,
+) -> dict[str, str]:
+    adapter = adapter or EchoAdapter()
+    context: dict[str, str] = {}
+    current = "__start__"
+
+    while current != "__end__":
+        next_nodes = get_next_transitions(workflow, current, context)
+        if not next_nodes:
+            break
+
+        next_node = next_nodes[0]
+        if next_node == "__end__":
+            break
+
+        node_def = workflow.nodes.get(next_node)
+        if not node_def:
+            break
+
+        inp = ExecutorInput(
+            role=node_def.role,
+            prompt_path=node_def.prompt,
+            skill_paths=node_def.skills,
+            inputs=node_def.inputs,
+            outputs=node_def.outputs,
+            run_dir=run_dir,
+        )
+
+        if dry_run:
+            result = _mock_execution(inp, node_def)
+        else:
+            result = adapter.execute(inp)
+
+        errors = validate_artifacts(node_def.outputs, run_dir)
+        if errors and not dry_run:
+            raise RuntimeError(f"Artifact validation failed: {'; '.join(errors)}")
+
+        if result.outputs:
+            context.update(result.outputs)
+
+        current = next_node
+
+    return context
+
+
+def _mock_execution(inp: ExecutorInput, node_def) -> ExecutorResult:
+    outputs = {}
+    for key, path_str in node_def.outputs.items():
+        artifact_path = inp.run_dir / path_str
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(f"mock: {key}")
+        outputs[key] = str(artifact_path)
+    return ExecutorResult(outputs=outputs, returncode=0, stdout="[dry-run]", stderr="")

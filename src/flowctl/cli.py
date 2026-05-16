@@ -1,5 +1,9 @@
 import click
+from pathlib import Path
 from .init_cmd import run_init
+from .loader import load_workflow, validate_workflow
+from .runner import run_workflow
+from .executors import EchoAdapter
 
 
 @click.group()
@@ -18,5 +22,23 @@ def init(target):
 @click.option("--dry-run", is_flag=True)
 @click.option("--executor", default="echo")
 @click.option("--run-id", default=None)
-def run(dry_run, executor, run_id):
-    click.echo(f"flowctl run — dry_run={dry_run}, executor={executor}, run_id={run_id}")
+@click.argument("workflow", default=".flows/workflows/default.yaml")
+def run(dry_run, executor, workflow, run_id):
+    wf_path = Path(workflow)
+    if not wf_path.exists():
+        click.echo(f"Workflow not found: {wf_path}", err=True)
+        raise click.Abort()
+
+    wf = load_workflow(wf_path)
+    errors = validate_workflow(wf)
+    if errors:
+        for e in errors:
+            click.echo(f"Validation error: {e}", err=True)
+        raise click.Abort()
+
+    run_dir = Path(".flows/runs") / (run_id or "latest")
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    adapter = EchoAdapter()
+    result = run_workflow(wf, run_dir, adapter=adapter, dry_run=dry_run)
+    click.echo(f"Run complete. Context: {result}")
