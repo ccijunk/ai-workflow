@@ -57,6 +57,18 @@ nodes:
     inputs: {design: docs/design.md, test_design: docs/test-design.md}
     outputs: {design_approved: design-approved.txt}
 
+  redesign:
+    role: architect
+    prompt: prompts/redesign.md
+    executor: opencode
+    inputs:
+      design: docs/design.md
+      test_design: docs/test-design.md
+      reject_reason: reject-reason.txt
+    outputs:
+      design_md: docs/design.md
+      test_design_md: docs/test-design.md
+
   explore:
     role: developer
     prompt: prompts/explore.md
@@ -148,8 +160,11 @@ transitions:
     when: design_approved == "yes"
 
   - from: human_confirm_design
-    to: clarify
+    to: redesign
     when: design_approved == "no"
+
+  - from: redesign
+    to: human_confirm_design
 
   - from: explore
     to: implement
