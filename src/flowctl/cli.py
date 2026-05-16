@@ -33,6 +33,7 @@ def status(run_id, target):
     """Show workflow run status."""
     from pathlib import Path
     from .state import load_state, WorkflowStatus
+    from .runner import MAX_REJECTS
     
     base_dir = Path(target or ".")
     run_dir = base_dir / ".flows" / "runs" / (run_id or "latest")
@@ -50,11 +51,15 @@ def status(run_id, target):
     click.echo(f"Status: {state.status.value.upper()}")
     click.echo(f"Node: {state.current_node}")
     
+    if state.reject_counts:
+        for node, count in state.reject_counts.items():
+            click.echo(f"Reject count ({node}): {count}/{MAX_REJECTS}")
+    
     if state.status == WorkflowStatus.PAUSED:
         if state.pending_approval_for:
             click.echo(f"Pending approval: {state.pending_approval_for}")
         click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir.name}")
-        click.echo(f"Reject: flowctl run --resume --reject --run-id {run_dir.name}")
+        click.echo(f"Reject: flowctl run --resume --reject --reject-reason \"<reason>\" --run-id {run_dir.name}")
 
 
 @main.command()
