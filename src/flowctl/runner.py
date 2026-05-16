@@ -97,30 +97,28 @@ def run_workflow(
                 
                 context = state.context
                 
-                # Handle reject with reason
+                # Handle reject - always track count
                 if approval_decision == "no":
+                    reject_counts = state.reject_counts or {}
+                    approval_node = state.current_node
+                    count = reject_counts.get(approval_node, 0) + 1
+                    
+                    if count > MAX_REJECTS:
+                        click.echo(f"Error: Reject count exceeded ({count}/{MAX_REJECTS}) for node '{approval_node}'", err=True)
+                        raise click.Abort()
+                    
+                    reject_counts[approval_node] = count
+                    context["__reject_counts__"] = reject_counts
+                    
+                    # Handle reject_reason if provided
                     if reject_reason is not None:
                         reject_reason_path = run_dir / "reject-reason.txt"
                         reject_reason_path.write_text(reject_reason)
                         
-                        # Auto-load and validate
                         content = reject_reason_path.read_text().strip()
                         if not content:
                             click.echo("Error: reject-reason.txt is empty", err=True)
                             raise click.Abort()
-                        
-                        # Increment reject count
-                        reject_counts = state.reject_counts or {}
-                        approval_node = state.current_node
-                        count = reject_counts.get(approval_node, 0) + 1
-                        
-                        # Check limit
-                        if count > MAX_REJECTS:
-                            click.echo(f"Error: Reject count exceeded ({count}/{MAX_REJECTS}) for node '{approval_node}'", err=True)
-                            raise click.Abort()
-                        
-                        reject_counts[approval_node] = count
-                        context["__reject_counts__"] = reject_counts
                 
                 if approval_key and output_path:
                     artifact_path = run_dir / output_path
