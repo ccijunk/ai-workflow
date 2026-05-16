@@ -1,4 +1,5 @@
-from .base import ExecutorAdapter
+from .base import ExecutorAdapter, ExecutorInput, ExecutorResult
 from .echo import EchoAdapter
+from .opencode import OpencodeAdapter
 
-__all__ = ["ExecutorAdapter", "EchoAdapter"]
+__all__ = ["ExecutorAdapter", "ExecutorInput", "ExecutorResult", "EchoAdapter", "OpencodeAdapter"]
