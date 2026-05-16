@@ -4,7 +4,12 @@ from .models import WorkflowDef
 
 
 def load_workflow(path: str | Path) -> WorkflowDef:
-    raw = yaml.safe_load(Path(path).read_text())
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Workflow file not found: {path}")
+    raw = yaml.safe_load(p.read_text())
+    if raw is None:
+        raise ValueError(f"Workflow file is empty: {path}")
     if "transitions" in raw:
         for t in raw["transitions"]:
             if "from" in t:
@@ -22,4 +27,7 @@ def validate_workflow(wf: WorkflowDef) -> list[str]:
     has_start = any(t.from_ == "__start__" for t in wf.transitions)
     if not has_start:
         errors.append("No __start__ transition found")
+    has_end = any(t.to == "__end__" for t in wf.transitions)
+    if not has_end:
+        errors.append("No __end__ transition found (workflow may loop forever)")
     return errors

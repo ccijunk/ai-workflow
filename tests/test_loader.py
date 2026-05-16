@@ -1,5 +1,6 @@
 import tempfile
 from pathlib import Path
+import pytest
 from flowctl.loader import load_workflow, validate_workflow
 from flowctl.models import WorkflowDef, Node, Transition
 
@@ -45,3 +46,26 @@ def test_validate_unknown_node():
     )
     errors = validate_workflow(wf)
     assert any("nonexistent" in e for e in errors)
+
+
+def test_load_missing_file():
+    with pytest.raises(FileNotFoundError):
+        load_workflow("/nonexistent/workflow.yaml")
+
+
+def test_load_empty_file():
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write("")
+        path = f.name
+    with pytest.raises(ValueError, match="empty"):
+        load_workflow(path)
+    Path(path).unlink()
+
+
+def test_validate_no_end():
+    wf = WorkflowDef(
+        nodes={"a": Node(role="r", prompt="p.md")},
+        transitions=[Transition(from_="__start__", to="a")]
+    )
+    errors = validate_workflow(wf)
+    assert any("__end__" in e for e in errors)
