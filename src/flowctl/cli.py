@@ -36,8 +36,10 @@ def upgrade(target):
 @click.option("--log-level", default="INFO", help="Log level: DEBUG, INFO, WARNING, ERROR")
 @click.option("--log-format", default="json", help="Log format: json, text")
 @click.option("--resume", is_flag=True, help="Resume from saved state in run directory")
+@click.option("--approve", is_flag=True, help="Approve pending human node")
+@click.option("--reject", is_flag=True, help="Reject pending human node")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format,resume):
+def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format, resume, approve, reject):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -48,6 +50,14 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
     if errors:
         for e in errors:
             click.echo(f"Validation error: {e}", err=True)
+        raise click.Abort()
+    
+    if (approve or reject) and not resume:
+        click.echo("Error: Must use --resume with --approve/--reject", err=True)
+        raise click.Abort()
+    
+    if approve and reject:
+        click.echo("Error: Cannot use both --approve and --reject", err=True)
         raise click.Abort()
 
     run_dir = Path(".flows/runs") / (run_id or "latest")

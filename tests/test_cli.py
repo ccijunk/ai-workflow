@@ -34,3 +34,35 @@ def test_run_command():
         result = runner.invoke(main, ["run", "--dry-run"])
         assert result.exit_code == 0
         assert "Run complete" in result.output
+
+
+def test_cli_approve_reject_flags():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        flows_dir = Path(".flows/workflows")
+        flows_dir.mkdir(parents=True)
+        workflow_file = flows_dir / "default.yaml"
+        workflow_file.write_text(
+            "version: '1'\n"
+            "nodes:\n"
+            "  planner:\n"
+            "    role: planner\n"
+            "    prompt: prompts/plan.md\n"
+            "    inputs: {}\n"
+            "    outputs: {spec: spec.md}\n"
+            "transitions:\n"
+            "  - from: __start__\n"
+            "    to: planner\n"
+            "  - from: planner\n"
+            "    to: __end__\n"
+        )
+        
+        # Test approve flag validation - must use --resume
+        result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--approve"])
+        assert result.exit_code != 0
+        assert "must use --resume" in result.output.lower()
+        
+        # Test both flags error
+        result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--resume", "--approve", "--reject"])
+        assert result.exit_code != 0
+        assert "cannot use both" in result.output.lower()
