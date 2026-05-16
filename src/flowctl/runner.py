@@ -46,8 +46,7 @@ def run_workflow(
             raise RuntimeError(f"No valid transitions from '{current}'")
 
         next_node = next_nodes[0]
-        if len(next_nodes) > 1:
-            pass
+        # v1 limitation: only first transition used; multiple branches not supported
 
         if next_node == "__end__":
             break
