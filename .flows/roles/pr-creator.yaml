@@ -1,0 +1,4 @@
+name: pr-creator
+model: alibaba-cn/glm-5
+description: PR Creator - creates pull requests with implementation changes
+default_prompt: prompts/roles/pr-creator-default.md

@@ -92,6 +92,13 @@ nodes:
     inputs: {}
     outputs: {pending_diff: pending.diff}
 
+  create_pr:
+    role: pr-creator
+    prompt: prompts/create-pr.md
+    executor: opencode
+    inputs: {implementation: implementation.md, review: review.md, reflect: pending.diff}
+    outputs: {pr_url: pr-url.txt}
+
 transitions:
   - from: __start__
     to: fetch_issue
@@ -153,4 +160,7 @@ transitions:
     to: testing
 
   - from: reflect
+    to: create_pr
+
+  - from: create_pr
     to: __end__
