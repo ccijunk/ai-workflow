@@ -83,9 +83,15 @@ def run_workflow(
 
 def _mock_execution(inp: ExecutorInput, node_def) -> ExecutorResult:
     outputs = {}
+    mock_values = {
+        "pass": "yes",
+        "verdict": "PASS",
+        "ok": "pass",
+    }
     for key, path_str in node_def.outputs.items():
         artifact_path = inp.run_dir / path_str
         artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_path.write_text(f"mock: {key}")
-        outputs[key] = str(artifact_path)
+        mock_val = mock_values.get(key, f"mock: {key}")
+        artifact_path.write_text(mock_val)
+        outputs[key] = mock_val
     return ExecutorResult(outputs=outputs, returncode=0, stdout="[dry-run]", stderr="")

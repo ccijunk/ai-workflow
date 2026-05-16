@@ -51,17 +51,18 @@ def test_workflow_no_matching_transition_raises():
     wf = WorkflowDef(
         nodes={
             "planner": Node(role="planner", prompt="p.md", inputs={}, outputs={}),
-            "critic": Node(role="critic", prompt="c.md", inputs={}, outputs={"ok": "ok.md"}),
+            "critic": Node(role="critic", prompt="c.md", inputs={}, outputs={"status": "status.md"}),
         },
         transitions=[
             Transition(from_="__start__", to="planner"),
             Transition(from_="planner", to="critic"),
-            Transition(from_="critic", to="planner", when='ok == "redo"'),
-            Transition(from_="critic", to="__end__", when='ok == "pass"'),
+            Transition(from_="critic", to="planner", when='status == "redo"'),
+            Transition(from_="critic", to="__end__", when='status == "done"'),
         ],
     )
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)
+        # mock returns status="mock: status" which doesn't match either condition
         with pytest.raises(RuntimeError, match="No valid transitions"):
             run_workflow(wf, run_dir, dry_run=True)
 

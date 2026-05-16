@@ -1,0 +1,116 @@
+version: "1"
+
+nodes:
+  clarify:
+    role: architect
+    prompt: prompts/clarity.md
+    executor: opencode
+    inputs: {}
+    outputs: {clarify_md: clarify.md}
+
+  design:
+    role: architect
+    prompt: prompts/design.md
+    executor: opencode
+    inputs: {clarify: clarify.md}
+    outputs: {design_md: docs/design.md}
+
+  test_design:
+    role: test-arch
+    prompt: prompts/test-design.md
+    executor: opencode
+    inputs: {design: docs/design.md}
+    outputs: {test_design_md: docs/test-design.md}
+
+  explore:
+    role: developer
+    prompt: prompts/explore.md
+    executor: opencode
+    inputs: {design: docs/design.md}
+    outputs: {explore_md: explore.md}
+
+  coding:
+    role: developer
+    prompt: prompts/coding.md
+    executor: opencode
+    inputs: {explore: explore.md, test_design: docs/test-design.md}
+    outputs: {implementation_md: implementation.md}
+
+  testing:
+    role: tester
+    prompt: prompts/testing.md
+    executor: opencode
+    inputs: {implementation: implementation.md}
+    outputs: {test_report: test-report.md, pass: pass.txt}
+
+  fix_test:
+    role: developer
+    prompt: prompts/fix-test.md
+    executor: opencode
+    inputs: {test_report: test-report.md}
+    outputs: {fix_md: fix.md}
+
+  review:
+    role: reviewer
+    prompt: prompts/review.md
+    executor: opencode
+    inputs: {implementation: implementation.md, test_report: test-report.md}
+    outputs: {review_md: review.md, verdict: verdict.txt}
+
+  fix_review:
+    role: developer
+    prompt: prompts/fix-review.md
+    executor: opencode
+    inputs: {review: review.md}
+    outputs: {fix_review_md: fix-review.md}
+
+  reflect:
+    role: meta
+    prompt: prompts/reflect.md
+    executor: opencode
+    inputs: {}
+    outputs: {pending_diff: pending.diff}
+
+transitions:
+  - from: __start__
+    to: clarify
+
+  - from: clarify
+    to: design
+
+  - from: design
+    to: test_design
+
+  - from: test_design
+    to: explore
+
+  - from: explore
+    to: coding
+
+  - from: coding
+    to: testing
+
+  - from: testing
+    to: review
+    when: pass == "yes"
+
+  - from: testing
+    to: fix_test
+    when: pass == "no"
+
+  - from: fix_test
+    to: testing
+
+  - from: review
+    to: reflect
+    when: verdict == "PASS"
+
+  - from: review
+    to: fix_review
+    when: verdict == "FAIL"
+
+  - from: fix_review
+    to: testing
+
+  - from: reflect
+    to: __end__
