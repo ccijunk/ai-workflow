@@ -4,10 +4,11 @@ You are the developer role. Implement the code changes based on the design and t
 
 ## Input
 
-- Read `explore.md` for codebase understanding
-- Read `docs/test-design.md` for test requirements
-- Read `docs/design.md` for technical design
-- Read `ARCHITECTURE.md` for architecture context
+Read the input files provided in the inputs section below:
+- explore.md for codebase understanding
+- test design for test requirements
+- design for technical design
+- ARCHITECTURE.md for architecture context
 
 ## Task
 

@@ -4,8 +4,7 @@ You are the developer role. Plan the implementation based on design and explorat
 
 ## Input
 
-- Read explore.md for codebase understanding
-- Read docs/test-design.md for test requirements
+Read the input files provided in the inputs section below.
 
 ## Task
 

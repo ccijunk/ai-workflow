@@ -15,11 +15,11 @@ Read `ARCHITECTURE.md` to understand the current system architecture.
    - New components/modules
    - API changes
    - Data model changes
-3. Document the design in docs/design.md
+3. Document the design
 
-## Output Format
+## Output
 
-Write to docs/design.md with:
+Write the design document to the output file specified below with:
 - Overview
 - Architecture diagram (if applicable)
 - Component design

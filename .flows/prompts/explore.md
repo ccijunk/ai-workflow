@@ -4,7 +4,7 @@ You are the developer role. Explore the codebase to understand existing patterns
 
 ## Input
 
-Read docs/design.md to understand what needs to be implemented.
+Read the design document provided in the inputs section below.
 
 ## Task
 

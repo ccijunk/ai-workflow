@@ -15,11 +15,11 @@ Read `ARCHITECTURE.md` to understand the current system architecture.
    - Integration tests needed
    - Test fixtures/mock data
    - Edge cases to cover
-3. Document in docs/test-design.md
+3. Document the test design
 
-## Output Format
+## Output
 
-Write to docs/test-design.md with:
+Write the test design to the output file specified below with:
 - Test strategy overview
 - Unit test plan
 - Integration test plan
