@@ -10,6 +10,7 @@ def run_init(target_dir: str | None = None) -> str:
     dirs = [
         flows_dir,
         flows_dir / "workflows",
+        flows_dir / "scripts",
         flows_dir / "memory",
         flows_dir / "memory" / "local",
         flows_dir / "runs",

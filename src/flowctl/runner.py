@@ -12,14 +12,27 @@ MAX_ITERATIONS = 100
 MAX_REJECTS = 5  # Maximum reject attempts per approval node
 
 
-def resolve_executor(node: Node, default: str, config: FlowctlConfig | None) -> str:
+def resolve_executor(node: Node, default: str, config: FlowctlConfig | None, roles: dict | None = None) -> str:
     if node.executor:
         return node.executor
+    if node.role and roles and node.role in roles:
+        role_config = roles[node.role]
+        if hasattr(role_config, 'executor') and role_config.executor:
+            return role_config.executor
     if default:
         return default
     if config and config.preferred_executor:
         return config.preferred_executor
     return "echo"
+
+
+def resolve_executor_config(node: Node) -> dict:
+    """Build executor config from node definition."""
+    config = {}
+    if node.executor == "bash":
+        config["script_path"] = node.command or ""
+        config["timeout_seconds"] = node.timeout_seconds or 60
+    return config
 
 
 def load_flowctl_config(workflow_dir: Path | None) -> FlowctlConfig | None:
@@ -172,7 +185,7 @@ def run_workflow(
 
         logger.log_node_start(next_node, node_def.role, node_def.prompt, node_def.skills, node_def.inputs)
 
-        executor_name = resolve_executor(node_def, default_executor, config) if adapter is None else adapter.__class__.__name__
+        executor_name = resolve_executor(node_def, default_executor, config, workflow.roles) if adapter is None else adapter.__class__.__name__
         
         # Skip human node if we just resumed with approval
         if executor_name == "human" and approval_decision and current == next_node:
@@ -203,7 +216,9 @@ def run_workflow(
             if adapter is not None:
                 node_adapter = adapter
             else:
-                cfg = executor_config.get(executor_name, {}) if executor_config else {}
+                base_cfg = executor_config.get(executor_name, {}) if executor_config else {}
+                node_cfg = resolve_executor_config(node_def)
+                cfg = {**base_cfg, **node_cfg}
                 node_adapter = registry.get(executor_name, **cfg)
             result = node_adapter.execute(inp)
 
