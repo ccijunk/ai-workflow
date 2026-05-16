@@ -1,5 +1,6 @@
 import tempfile
 import pytest
+import click
 from pathlib import Path
 import json
 from flowctl.models import WorkflowDef, Node, Transition
@@ -254,3 +255,90 @@ def test_workflow_human_node_without_outputs(tmp_path):
     assert state.current_node == "human_approval"
     assert state.pending_approval_for is None
     assert state.pending_transition_from == "step1"
+
+
+def test_workflow_resume_with_approve(tmp_path):
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+            "step2": Node(role="dev", prompt="p3.md", inputs={}, outputs={"output2": "out2.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="step2", when="approved == 'yes'"),
+            Transition(from_="human_approval", to="__end__", when="approved == 'no'"),
+            Transition(from_="step2", to="__end__"),
+        ],
+    )
+    
+    from flowctl.state import save_state, WorkflowStatus
+    
+    # Simulate paused state
+    save_state(tmp_path, "human_approval", {"output1": "existing"}, 1, 
+               status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1")
+    
+    # Resume with approve
+    result = run_workflow(wf, tmp_path, dry_run=False, resume=True, approval_decision="yes")
+    
+    assert "approved" in result
+    assert result["approved"] == "yes"
+    assert "output2" in result
+    assert not has_state(tmp_path)
+
+
+def test_workflow_resume_with_reject(tmp_path):
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+            "step2": Node(role="dev", prompt="p3.md", inputs={}, outputs={"output2": "out2.md"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="step2", when="approved == 'yes'"),
+            Transition(from_="human_approval", to="__end__", when="approved == 'no'"),
+            Transition(from_="step2", to="__end__"),
+        ],
+    )
+    
+    from flowctl.state import save_state, WorkflowStatus
+    
+    # Simulate paused state
+    save_state(tmp_path, "human_approval", {"output1": "existing"}, 1, 
+               status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1")
+    
+    # Resume with reject
+    result = run_workflow(wf, tmp_path, dry_run=False, resume=True, approval_decision="no")
+    
+    assert "approved" in result
+    assert result["approved"] == "no"
+    # step2 should NOT execute when rejected
+    assert "output2" not in result
+    assert not has_state(tmp_path)
+
+
+def test_workflow_resume_paused_without_approval_raises(tmp_path):
+    wf = WorkflowDef(
+        nodes={
+            "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
+            "human_approval": Node(role="human", prompt="p2.md", executor="human", inputs={}, outputs={"approved": "approved.txt"}),
+        },
+        transitions=[
+            Transition(from_="__start__", to="step1"),
+            Transition(from_="step1", to="human_approval"),
+            Transition(from_="human_approval", to="__end__"),
+        ],
+    )
+    
+    from flowctl.state import save_state, WorkflowStatus
+    
+    # Simulate paused state
+    save_state(tmp_path, "human_approval", {"output1": "existing"}, 1, 
+               status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1")
+    
+    # Resume without approval should raise
+    with pytest.raises(click.exceptions.Abort):
+        run_workflow(wf, tmp_path, dry_run=False, resume=True)

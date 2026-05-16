@@ -83,6 +83,12 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         initial_context["issue_url"] = issue
         issue_file = run_dir / "issue-url.txt"
         issue_file.write_text(issue)
+    
+    approval_decision = None
+    if approve:
+        approval_decision = "yes"
+    elif reject:
+        approval_decision = "no"
 
     result = run_workflow(
         wf, run_dir,
@@ -95,5 +101,6 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         log_level=log_level,
         log_format=log_format,
         resume=resume,
+        approval_decision=approval_decision,
     )
     click.echo(f"Run complete. Context: {result}")

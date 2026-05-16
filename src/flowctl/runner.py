@@ -62,6 +62,7 @@ def run_workflow(
     log_level: str = "INFO",
     log_format: str = "json",
     resume: bool = False,
+    approval_decision: str | None = None,
 ) -> dict[str, str]:
     config = load_flowctl_config(workflow_dir)
     
@@ -80,9 +81,33 @@ def run_workflow(
     if resume and has_state(run_dir):
         state = load_state(run_dir)
         if state:
-            current = state.current_node
-            context = state.context
-            iterations = state.iterations
+            if state.status == WorkflowStatus.PAUSED:
+                if not approval_decision:
+                    click.echo(f"Error: Workflow paused at '{state.current_node}'. Use --approve or --reject", err=True)
+                    raise click.Abort()
+                
+                node_def = workflow.nodes.get(state.current_node)
+                if not node_def:
+                    raise RuntimeError(f"Node '{state.current_node}' not found")
+                
+                approval_key = state.pending_approval_for
+                output_path = node_def.outputs.get(approval_key) if approval_key else None
+                
+                context = state.context
+                if approval_key and output_path:
+                    artifact_path = run_dir / output_path
+                    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                    artifact_path.write_text(approval_decision)
+                    context[approval_key] = artifact_path.read_text()
+                    click.echo(f"Resuming from '{state.current_node}' with decision: {approval_decision}")
+                
+                # Set current to the human node, will skip in the loop
+                current = state.current_node
+                iterations = state.iterations
+            else:
+                current = state.current_node
+                context = state.context
+                iterations = state.iterations
 
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -122,6 +147,13 @@ def run_workflow(
         logger.log_node_start(next_node, node_def.role, node_def.prompt, node_def.skills, node_def.inputs)
 
         executor_name = resolve_executor(node_def, default_executor, config) if adapter is None else adapter.__class__.__name__
+        
+        # Skip human node if we just resumed with approval
+        if executor_name == "human" and approval_decision and current == next_node:
+            current = next_node
+            if not dry_run:
+                save_state(run_dir, current, context, iterations, status=WorkflowStatus.RUNNING)
+            continue
 
         if executor_name == "human" and not dry_run:
             approval_key = list(node_def.outputs.keys())[0] if node_def.outputs else None
