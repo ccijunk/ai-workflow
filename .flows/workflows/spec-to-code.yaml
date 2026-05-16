@@ -57,19 +57,12 @@ nodes:
     inputs: {design: docs/design.md}
     outputs: {explore_md: explore.md}
 
-  coding:
+  implement:
     role: developer
-    prompt: prompts/coding.md
+    prompt: prompts/implement.md
     executor: opencode
-    inputs: {explore: explore.md, test_design: docs/test-design.md}
-    outputs: {implementation_md: implementation.md}
-
-  modify:
-    role: developer
-    prompt: prompts/modify-code.md
-    executor: opencode
-    inputs: {requirement: requirement.md, repo_root: repo-root.txt, branch_name: branch-name.txt, implementation: implementation.md}
-    outputs: {changes: changes.md}
+    inputs: {explore: explore.md, test_design: docs/test-design.md, design: docs/design.md, repo_root: repo-root.txt}
+    outputs: {implementation_md: implementation.md, changes: changes.md}
 
   testing:
     role: tester
@@ -149,12 +142,9 @@ transitions:
     when: design_approved == "no"
 
   - from: explore
-    to: coding
+    to: implement
 
-  - from: coding
-    to: modify
-
-  - from: modify
+  - from: implement
     to: testing
 
   - from: testing
@@ -166,7 +156,7 @@ transitions:
     when: pass == "no"
 
   - from: fix_test
-    to: modify
+    to: implement
 
   - from: review
     to: reflect
@@ -177,7 +167,7 @@ transitions:
     when: verdict == "FAIL"
 
   - from: fix_review
-    to: modify
+    to: implement
 
   - from: reflect
     to: create_pr
