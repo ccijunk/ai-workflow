@@ -9,6 +9,7 @@ from .logger import WorkflowLogger
 from .state import save_state, load_state, has_state, clear_state, WorkflowStatus
 
 MAX_ITERATIONS = 100
+MAX_REJECTS = 5  # Maximum reject attempts per approval node
 
 
 def resolve_executor(node: Node, default: str, config: FlowctlConfig | None) -> str:
@@ -63,6 +64,7 @@ def run_workflow(
     log_format: str = "json",
     resume: bool = False,
     approval_decision: str | None = None,
+    reject_reason: str | None = None,
 ) -> dict[str, str]:
     config = load_flowctl_config(workflow_dir)
     
@@ -94,6 +96,30 @@ def run_workflow(
                 output_path = node_def.outputs.get(approval_key) if approval_key else None
                 
                 context = state.context
+                
+                # Handle reject - always track count
+                if approval_decision == "no":
+                    reject_counts = state.reject_counts or {}
+                    approval_node = state.current_node
+                    count = reject_counts.get(approval_node, 0) + 1
+                    
+                    if count > MAX_REJECTS:
+                        click.echo(f"Error: Reject count exceeded ({count}/{MAX_REJECTS}) for node '{approval_node}'", err=True)
+                        raise click.Abort()
+                    
+                    reject_counts[approval_node] = count
+                    context["__reject_counts__"] = reject_counts
+                    
+                    # Handle reject_reason if provided
+                    if reject_reason is not None:
+                        reject_reason_path = run_dir / "reject-reason.txt"
+                        reject_reason_path.write_text(reject_reason)
+                        
+                        content = reject_reason_path.read_text().strip()
+                        if not content:
+                            click.echo("Error: reject-reason.txt is empty", err=True)
+                            raise click.Abort()
+                
                 if approval_key and output_path:
                     artifact_path = run_dir / output_path
                     artifact_path.parent.mkdir(parents=True, exist_ok=True)
@@ -152,17 +178,20 @@ def run_workflow(
         if executor_name == "human" and approval_decision and current == next_node:
             current = next_node
             if not dry_run:
-                save_state(run_dir, current, context, iterations, status=WorkflowStatus.RUNNING)
+                reject_counts_dict = context.get("__reject_counts__") or (state.reject_counts if resume and state else {})
+                save_state(run_dir, current, context, iterations, status=WorkflowStatus.RUNNING, reject_counts=reject_counts_dict)
             continue
 
         if executor_name == "human" and not dry_run:
             approval_key = list(node_def.outputs.keys())[0] if node_def.outputs else None
             prev_node = current
+            reject_counts_dict = context.get("__reject_counts__") or (state.reject_counts if resume and state else {})
             save_state(
                 run_dir, next_node, context, iterations,
                 status=WorkflowStatus.PAUSED,
                 pending_approval_for=approval_key,
                 pending_transition_from=prev_node,
+                reject_counts=reject_counts_dict,
             )
             logger.log_pause(next_node, node_def.inputs or {})
             click.echo(f"Workflow paused at '{next_node}'. Approve: flowctl run --resume --approve | Reject: flowctl run --resume --reject")
@@ -193,7 +222,8 @@ def run_workflow(
         current = next_node
         
         if not dry_run:
-            save_state(run_dir, current, context, iterations)
+            reject_counts_dict = context.get("__reject_counts__") or {}
+            save_state(run_dir, current, context, iterations, reject_counts=reject_counts_dict)
 
     clear_state(run_dir)
 

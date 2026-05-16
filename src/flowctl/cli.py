@@ -33,6 +33,7 @@ def status(run_id, target):
     """Show workflow run status."""
     from pathlib import Path
     from .state import load_state, WorkflowStatus
+    from .runner import MAX_REJECTS
     
     base_dir = Path(target or ".")
     run_dir = base_dir / ".flows" / "runs" / (run_id or "latest")
@@ -50,11 +51,15 @@ def status(run_id, target):
     click.echo(f"Status: {state.status.value.upper()}")
     click.echo(f"Node: {state.current_node}")
     
+    if state.reject_counts:
+        for node, count in state.reject_counts.items():
+            click.echo(f"Reject count ({node}): {count}/{MAX_REJECTS}")
+    
     if state.status == WorkflowStatus.PAUSED:
         if state.pending_approval_for:
             click.echo(f"Pending approval: {state.pending_approval_for}")
         click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir.name}")
-        click.echo(f"Reject: flowctl run --resume --reject --run-id {run_dir.name}")
+        click.echo(f"Reject: flowctl run --resume --reject --reject-reason \"<reason>\" --run-id {run_dir.name}")
 
 
 @main.command()
@@ -69,8 +74,9 @@ def status(run_id, target):
 @click.option("--resume", is_flag=True, help="Resume from saved state in run directory")
 @click.option("--approve", is_flag=True, help="Approve pending human node")
 @click.option("--reject", is_flag=True, help="Reject pending human node")
+@click.option("--reject-reason", default=None, help="Reason for rejection (required with --reject)")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format, resume, approve, reject):
+def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -89,6 +95,10 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
     
     if approve and reject:
         click.echo("Error: Cannot use both --approve and --reject", err=True)
+        raise click.Abort()
+    
+    if reject and not reject_reason:
+        click.echo("Error: --reject-reason is required when using --reject", err=True)
         raise click.Abort()
 
     run_dir = Path(".flows/runs") / (run_id or "latest")
@@ -133,5 +143,6 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         log_format=log_format,
         resume=resume,
         approval_decision=approval_decision,
+        reject_reason=reject_reason,
     )
     click.echo(f"Run complete. Context: {result}")

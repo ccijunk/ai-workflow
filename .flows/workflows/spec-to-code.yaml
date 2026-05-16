@@ -29,6 +29,13 @@ nodes:
     inputs: {clarify: clarify.md}
     outputs: {clarify_approved: clarify-approved.txt}
 
+  reclarify:
+    role: ba
+    prompt: prompts/reclarify.md
+    executor: opencode
+    inputs: {clarify: clarify.md, reject_reason: reject-reason.txt}
+    outputs: {clarify_md: clarify.md}
+
   design:
     role: architect
     prompt: prompts/design.md
@@ -49,6 +56,18 @@ nodes:
     executor: human
     inputs: {design: docs/design.md, test_design: docs/test-design.md}
     outputs: {design_approved: design-approved.txt}
+
+  redesign:
+    role: architect
+    prompt: prompts/redesign.md
+    executor: opencode
+    inputs:
+      design: docs/design.md
+      test_design: docs/test-design.md
+      reject_reason: reject-reason.txt
+    outputs:
+      design_md: docs/design.md
+      test_design_md: docs/test-design.md
 
   explore:
     role: developer
@@ -124,8 +143,11 @@ transitions:
     when: clarify_approved == "yes"
 
   - from: human_confirm_clarify
-    to: clarify
+    to: reclarify
     when: clarify_approved == "no"
+
+  - from: reclarify
+    to: human_confirm_clarify
 
   - from: design
     to: test_design
@@ -138,8 +160,11 @@ transitions:
     when: design_approved == "yes"
 
   - from: human_confirm_design
-    to: clarify
+    to: redesign
     when: design_approved == "no"
+
+  - from: redesign
+    to: human_confirm_design
 
   - from: explore
     to: implement

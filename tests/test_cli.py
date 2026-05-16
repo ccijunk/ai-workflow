@@ -83,3 +83,57 @@ def test_cli_status_command():
         assert result.exit_code == 0
         assert "PAUSED" in result.output
         assert "human_approval" in result.output
+
+
+def test_cli_reject_reason_required():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        flows_dir = Path(".flows/workflows")
+        flows_dir.mkdir(parents=True)
+        workflow_file = flows_dir / "default.yaml"
+        workflow_file.write_text(
+            "version: '1'\n"
+            "nodes:\n"
+            "  planner:\n"
+            "    role: planner\n"
+            "    prompt: prompts/plan.md\n"
+            "    inputs: {}\n"
+            "    outputs: {spec: spec.md}\n"
+            "transitions:\n"
+            "  - from: __start__\n"
+            "    to: planner\n"
+            "  - from: planner\n"
+            "    to: __end__\n"
+        )
+        
+        # Test reject without reason - must require reason
+        result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--resume", "--reject"])
+        assert result.exit_code != 0
+        assert "reject-reason" in result.output.lower()
+
+
+def test_cli_reject_reason_with_value():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        flows_dir = Path(".flows/workflows")
+        flows_dir.mkdir(parents=True)
+        workflow_file = flows_dir / "default.yaml"
+        workflow_file.write_text(
+            "version: '1'\n"
+            "nodes:\n"
+            "  planner:\n"
+            "    role: planner\n"
+            "    prompt: prompts/plan.md\n"
+            "    inputs: {}\n"
+            "    outputs: {spec: spec.md}\n"
+            "transitions:\n"
+            "  - from: __start__\n"
+            "    to: planner\n"
+            "  - from: planner\n"
+            "    to: __end__\n"
+        )
+        
+        # Test reject with reason - valid
+        result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--resume", "--reject", "--reject-reason", "Missing details"])
+        # May still fail due to no state, but CLI validation should pass
+        assert "--reject-reason is required" not in result.output
