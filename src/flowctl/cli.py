@@ -65,5 +65,8 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue):
         issue_file = run_dir / "issue-url.txt"
         issue_file.write_text(issue)
 
+    repo_root_file = run_dir / "repo-root.txt"
+    repo_root_file.write_text(str(Path.cwd()))
+
     result = run_workflow(wf, run_dir, adapter=adapter, dry_run=dry_run, initial_context=initial_context)
     click.echo(f"Run complete. Context: {result}")
