@@ -19,6 +19,14 @@ def init(target):
 
 
 @main.command()
+@click.option("--target", default=None)
+def upgrade(target):
+    """Reconcile .flows/config.yaml schema for new framework versions."""
+    from .upgrade_cmd import run_upgrade
+    run_upgrade(target)
+
+
+@main.command()
 @click.option("--dry-run", is_flag=True)
 @click.option("--executor", default="echo")
 @click.option("--run-id", default=None)
