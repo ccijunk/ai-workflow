@@ -27,6 +27,37 @@ def upgrade(target):
 
 
 @main.command()
+@click.option("--run-id", default=None)
+@click.option("--target", default=None)
+def status(run_id, target):
+    """Show workflow run status."""
+    from pathlib import Path
+    from .state import load_state, WorkflowStatus
+    
+    base_dir = Path(target or ".")
+    run_dir = base_dir / ".flows" / "runs" / (run_id or "latest")
+    
+    if not run_dir.exists():
+        click.echo(f"Run directory not found: {run_dir}", err=True)
+        raise click.Abort()
+    
+    state = load_state(run_dir)
+    if not state:
+        click.echo(f"No state found in: {run_dir}")
+        return
+    
+    click.echo(f"Run: {run_dir.name}")
+    click.echo(f"Status: {state.status.value.upper()}")
+    click.echo(f"Node: {state.current_node}")
+    
+    if state.status == WorkflowStatus.PAUSED:
+        if state.pending_approval_for:
+            click.echo(f"Pending approval: {state.pending_approval_for}")
+        click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir.name}")
+        click.echo(f"Reject: flowctl run --resume --reject --run-id {run_dir.name}")
+
+
+@main.command()
 @click.option("--dry-run", is_flag=True)
 @click.option("--executor", default="echo", help="Executor: echo, opencode")
 @click.option("--model", default=None, help="Model for executor (e.g., alibaba-cn/glm-5)")

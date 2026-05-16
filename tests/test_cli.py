@@ -66,3 +66,20 @@ def test_cli_approve_reject_flags():
         result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--resume", "--approve", "--reject"])
         assert result.exit_code != 0
         assert "cannot use both" in result.output.lower()
+
+
+def test_cli_status_command():
+    from flowctl.state import save_state, WorkflowStatus
+    
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        run_dir = Path(".flows/runs/test-run")
+        run_dir.mkdir(parents=True)
+        save_state(run_dir, "human_approval", {"input": "test.md"}, 1,
+                   status=WorkflowStatus.PAUSED, pending_approval_for="approved", pending_transition_from="step1")
+        
+        result = runner.invoke(main, ["status", "--run-id", "test-run"])
+        
+        assert result.exit_code == 0
+        assert "PAUSED" in result.output
+        assert "human_approval" in result.output
