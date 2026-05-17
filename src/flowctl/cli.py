@@ -14,9 +14,10 @@ def main():
 
 @main.command()
 @click.option("--target", default=None, help="Target directory")
-def init(target):
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
+def init(target, config):
     """Bootstrap .flows/ directory in the target project."""
-    run_init(target)
+    run_init(target, config)
 
 
 @main.command()

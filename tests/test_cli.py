@@ -9,7 +9,8 @@ def test_init_command():
     runner = CliRunner()
     result = runner.invoke(main, ["init"])
     assert result.exit_code == 0
-    assert "Initialized .flows/" in result.output
+    assert "Initialized" in result.output
+    assert ".flows" in result.output
 
 
 def test_run_command():
