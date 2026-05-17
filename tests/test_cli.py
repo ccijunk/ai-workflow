@@ -1,6 +1,7 @@
 from click.testing import CliRunner
 from flowctl.cli import main
 import tempfile
+import shutil
 from pathlib import Path
 
 
@@ -188,34 +189,38 @@ def test_run_config_option():
 def test_run_run_dir_option():
     """--run-dir option overrides config."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        # Create workflow
-        flows_dir = Path(".flows/workflows")
-        flows_dir.mkdir(parents=True)
-        workflow_file = flows_dir / "default.yaml"
-        workflow_file.write_text(
-            "version: '1'\n"
-            "nodes:\n"
-            "  planner:\n"
-            "    role: planner\n"
-            "    prompt: prompts/plan.md\n"
-            "    inputs: {}\n"
-            "    outputs: {spec: spec.md}\n"
-            "transitions:\n"
-            "  - from: __start__\n"
-            "    to: planner\n"
-            "  - from: planner\n"
-            "    to: __end__\n"
-        )
-        
-        result = runner.invoke(main, [
-            'run',
-            '--run-dir', '/tmp/test-runs',
-            '--dry-run',
-            '--run-id', 'test-cli-override',
-            '.flows/workflows/default.yaml',
-        ])
-        
-        assert result.exit_code == 0
-        # Check that run dir was used
-        assert Path('/tmp/test-runs/test-cli-override').exists()
+    temp_run_dir = tempfile.mkdtemp()
+    try:
+        with runner.isolated_filesystem():
+            # Create workflow
+            flows_dir = Path(".flows/workflows")
+            flows_dir.mkdir(parents=True)
+            workflow_file = flows_dir / "default.yaml"
+            workflow_file.write_text(
+                "version: '1'\n"
+                "nodes:\n"
+                "  planner:\n"
+                "    role: planner\n"
+                "    prompt: prompts/plan.md\n"
+                "    inputs: {}\n"
+                "    outputs: {spec: spec.md}\n"
+                "transitions:\n"
+                "  - from: __start__\n"
+                "    to: planner\n"
+                "  - from: planner\n"
+                "    to: __end__\n"
+            )
+            
+            result = runner.invoke(main, [
+                'run',
+                '--run-dir', temp_run_dir,
+                '--dry-run',
+                '--run-id', 'test-cli-override',
+                '.flows/workflows/default.yaml',
+            ])
+            
+            assert result.exit_code == 0
+            # Check that run dir was used
+            assert Path(temp_run_dir).joinpath('test-cli-override').exists()
+    finally:
+        shutil.rmtree(temp_run_dir, ignore_errors=True)
