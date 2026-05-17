@@ -193,10 +193,9 @@ def test_executor_config_passed():
 def test_load_flowctl_config():
     with tempfile.TemporaryDirectory() as tmp:
         workflow_dir = Path(tmp)
-        flows_dir = workflow_dir / ".flows"
-        flows_dir.mkdir(parents=True)
+        workflow_dir.mkdir(parents=True, exist_ok=True)
         
-        config_file = flows_dir / "config.yaml"
+        config_file = workflow_dir / "config.yaml"
         config_file.write_text("preferred_executor: opencode\nframework_version: 0.1.0\n")
         
         config = load_flowctl_config(workflow_dir)
@@ -209,4 +208,5 @@ def test_load_flowctl_config_missing():
         workflow_dir = Path(tmp)
         
         config = load_flowctl_config(workflow_dir)
-        assert config is None
+        assert config is not None
+        assert config.preferred_executor == "echo"  # default value
