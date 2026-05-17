@@ -32,10 +32,9 @@ class OpencodeAdapter(ExecutorAdapter):
                 skill_file.write_text(src_skill.read_text())
             cmd.extend(["--file", str(skill_file)])
 
-        cmd.append(prompt_content)
-
         proc = subprocess.run(
             cmd,
+            input=prompt_content,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

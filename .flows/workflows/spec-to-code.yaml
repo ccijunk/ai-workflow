@@ -6,7 +6,7 @@ nodes:
     executor: bash
     command: scripts/fetch-issue.sh
     inputs: {issue_url: issue-url.txt}
-    outputs: {requirement: requirement.md}
+    outputs: {requirement: requirement.md, repo_root: repo-root.txt}
 
   create_branch:
     role: github

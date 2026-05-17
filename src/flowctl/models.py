@@ -31,7 +31,7 @@ class Transition(BaseModel):
 
 class Node(BaseModel):
     role: str
-    prompt: str
+    prompt: Optional[str] = None
     skills: list[str] = []
     inputs: dict[str, str] = {}
     outputs: dict[str, str] = {}
@@ -40,22 +40,23 @@ class Node(BaseModel):
     timeout_seconds: Optional[int] = 60
 
     @model_validator(mode='after')
-    def validate_command_field(self) -> 'Node':
-        if self.executor == 'bash' and not self.command:
-            raise ValueError(
-                f"Node with executor='bash' must have 'command' field. "
-                f"Specify a script path like 'scripts/fetch-issue.sh'"
-            )
-        if self.executor and self.executor != 'bash' and self.command:
-            raise ValueError(
-                f"'command' field is only allowed when executor='bash'. "
-                f"Current executor: {self.executor}"
-            )
-        if self.executor is None and self.command:
-            raise ValueError(
-                f"'command' field is only allowed when executor='bash'. "
-                f"Either set executor='bash' or remove the command field."
-            )
+    def validate_fields(self) -> 'Node':
+        if self.executor == 'bash':
+            if not self.command:
+                raise ValueError(
+                    f"Node with executor='bash' must have 'command' field. "
+                    f"Specify a script path like 'scripts/fetch-issue.sh'"
+                )
+        else:
+            if self.command:
+                raise ValueError(
+                    f"'command' field is only allowed when executor='bash'. "
+                    f"Current executor: {self.executor or 'none'}"
+                )
+            if not self.prompt:
+                raise ValueError(
+                    f"Node without executor='bash' must have 'prompt' field."
+                )
         if self.timeout_seconds is not None and self.timeout_seconds <= 0:
             raise ValueError(f"timeout_seconds must be positive: {self.timeout_seconds}")
         return self

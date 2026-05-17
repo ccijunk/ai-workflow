@@ -98,7 +98,7 @@ class BashExecutor(ExecutorAdapter):
                     input_path = workflow_path
 
             if input_path.exists():
-                args.append(input_path.read_text())
+                args.append(input_path.read_text().rstrip('\n'))
             else:
                 args.append("")
 

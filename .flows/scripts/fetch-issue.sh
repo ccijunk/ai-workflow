@@ -45,3 +45,11 @@ BODY=$(echo "$JSON_OUTPUT" | jq -r '.body // ""')
 } > "$RUN_DIR/requirement.md"
 
 echo "Fetched issue #$ISSUE_NUMBER from $OWNER/$REPO" >&2
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [[ -z "$REPO_ROOT" ]]; then
+    REPO_ROOT="$(pwd)"
+fi
+
+echo "$REPO_ROOT" > "$RUN_DIR/repo-root.txt"
+echo "Repo root: $REPO_ROOT" >&2
