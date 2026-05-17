@@ -27,12 +27,18 @@ Compare docs/design.md to actual implementation:
 4. Mark each design element: ✅ Matches / ❌ Missing / ⚠️ Deviates
 
 ### Phase 3: Acceptance Criteria Check
-Verify each acceptance criteria from clarify.md:
-1. List all Functional AC (AC1-AC9)
-2. List all Non-Functional AC (NF1-NF4)
-3. List all Edge Cases (EC1-EC6)
-4. Verify each with evidence (file paths, test names, or code references)
-5. Mark each AC: ✅ Verified / ❌ Not met / ⚠️ Needs verification
+
+**IMPORTANT**: clarify.md may use different section names. Look for:
+- "Acceptance Criteria" section with criteria entries
+- Any table with criteria/requirements
+- Functional, Non-Functional, and Edge Case markers if present
+
+For each criteria found in clarify.md:
+1. Verify it with evidence (file paths, test names, or code references)
+2. Mark: ✅ Verified / ❌ Not met / ⚠️ Needs verification
+
+DO NOT assume AC1-AC9, NF1-NF4, EC1-EC6 format.
+Read the actual clarify.md and extract criteria from whatever format it uses.
 
 ### Phase 4: Code Quality Check
 Review the actual code changes:
