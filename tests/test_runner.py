@@ -113,8 +113,11 @@ def test_workflow_resume_from_state():
         # Should retain context from state
         assert result["output1"] == "existing"
         
-        # State should be cleared after completion
-        assert not has_state(run_dir)
+        # State should remain unchanged in dry_run mode (not cleared, not updated to COMPLETED)
+        state = load_state(run_dir)
+        assert state is not None
+        # State should still have original values (dry_run doesn't update state)
+        assert state.current_node == "step1"
 
 
 def test_workflow_resume_no_state():
@@ -158,7 +161,7 @@ def test_workflow_saves_state_after_node():
         assert not has_state(run_dir)
 
 
-def test_workflow_state_cleared_on_success():
+def test_workflow_state_saved_on_success():
     wf = WorkflowDef(
         nodes={
             "step1": Node(role="dev", prompt="p1.md", inputs={}, outputs={"output1": "out1.md"}),
@@ -175,8 +178,12 @@ def test_workflow_state_cleared_on_success():
         # Mock execution to simulate real run
         run_workflow(wf, run_dir, dry_run=False)
         
-        # State should be cleared after successful completion
-        assert not has_state(run_dir)
+        # State should be saved with completed status after successful completion
+        from flowctl.state import WorkflowStatus
+        state = load_state(run_dir)
+        assert state is not None
+        assert state.status == WorkflowStatus.COMPLETED
+        assert state.current_node == "__end__"
 
 
 def test_workflow_pauses_at_human_node(tmp_path):
@@ -227,6 +234,7 @@ def test_workflow_human_node_with_dry_run_does_not_pause(tmp_path):
     
     assert "output2" in result
     assert "output3" in result
+    # Dry run should not save state
     assert not has_state(tmp_path)
 
 
@@ -285,7 +293,11 @@ def test_workflow_resume_with_approve(tmp_path):
     assert "approved" in result
     assert result["approved"] == "yes"
     assert "output2" in result
-    assert not has_state(tmp_path)
+    # State should be saved with completed status
+    from flowctl.state import WorkflowStatus
+    state = load_state(tmp_path)
+    assert state is not None
+    assert state.status == WorkflowStatus.COMPLETED
 
 
 def test_workflow_resume_with_reject(tmp_path):
@@ -317,7 +329,11 @@ def test_workflow_resume_with_reject(tmp_path):
     assert result["approved"] == "no"
     # step2 should NOT execute when rejected
     assert "output2" not in result
-    assert not has_state(tmp_path)
+    # State should be saved with completed status
+    from flowctl.state import WorkflowStatus
+    state = load_state(tmp_path)
+    assert state is not None
+    assert state.status == WorkflowStatus.COMPLETED
 
 
 def test_workflow_resume_paused_without_approval_raises(tmp_path):
@@ -501,4 +517,8 @@ def test_workflow_multiple_reject_cycles(tmp_path):
     # Third reject cycle then approve
     run_workflow(wf, tmp_path, dry_run=False, resume=True, approval_decision="yes")
     
-    assert not has_state(tmp_path)
+    # State should be saved with completed status
+    from flowctl.state import WorkflowStatus
+    state = load_state(tmp_path)
+    assert state is not None
+    assert state.status == WorkflowStatus.COMPLETED

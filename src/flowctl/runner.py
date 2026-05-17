@@ -240,7 +240,9 @@ def run_workflow(
             reject_counts_dict = context.get("__reject_counts__") or {}
             save_state(run_dir, current, context, iterations, reject_counts=reject_counts_dict)
 
-    clear_state(run_dir)
+    if not dry_run:
+        reject_counts_dict = context.get("__reject_counts__") or {}
+        save_state(run_dir, "__end__", context, iterations, status=WorkflowStatus.COMPLETED, reject_counts=reject_counts_dict)
 
     logger.log_workflow_end("completed")
     return context
