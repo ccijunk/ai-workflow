@@ -862,7 +862,7 @@ nodes:
     role: developer
     prompt: prompts/fix-review.md
     executor: opencode
-    inputs: {review: review.md, fix: fix.md}
+    inputs: {review: review.md}
     outputs: {fix_review_md: fix-review.md}
 
   create_pr:
