@@ -1,0 +1,1 @@
+uv run flowctl run --executor opencode --issue "https://github.com/ccijunk/ai-workflow/issues/9" --run-id issue-9 .flows/workflows/spec-to-code.yaml --resume --approve
