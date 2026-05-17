@@ -4,6 +4,9 @@ set -euo pipefail
 REQUIREMENT="${1:-}"
 BRANCH_NAME="${2:-}"
 REPO_ROOT="${3:-}"
+IMPLEMENTATION="${4:-}"
+REVIEW="${5:-}"
+TEST_REPORT="${6:-}"
 
 if [[ -z "$BRANCH_NAME" ]]; then
     echo "Error: branch_name input is required" >&2
@@ -53,7 +56,23 @@ if [[ -z "$TITLE" ]]; then
     TITLE="Implement changes for $BRANCH_NAME"
 fi
 
-BODY="${REQUIREMENT}"
+BODY=""
+
+if [[ -n "$REQUIREMENT" ]]; then
+    BODY="${BODY}## Requirement"$'\n\n'"$REQUIREMENT"$'\n\n'
+fi
+
+if [[ -n "$IMPLEMENTATION" ]]; then
+    BODY="${BODY}## Implementation"$'\n\n'"$IMPLEMENTATION"$'\n\n'
+fi
+
+if [[ -n "$REVIEW" ]]; then
+    BODY="${BODY}## Review"$'\n\n'"$REVIEW"$'\n\n'
+fi
+
+if [[ -n "$TEST_REPORT" ]]; then
+    BODY="${BODY}## Test Report"$'\n\n'"$TEST_REPORT"$'\n\n'
+fi
 
 PR_URL=$(gh pr create --title "$TITLE" --body "$BODY" --base main 2>&1)
 if [[ $? -ne 0 ]]; then
