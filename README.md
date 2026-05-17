@@ -32,6 +32,9 @@ uv run flowctl run .flows/workflows/hello-world.yaml --dry-run
 uv run flowctl run --executor opencode --issue "https://github.com/ccijunk/ai-workflow/issues/10" --run-id issue-10 .flows/workflows/spec-to-code.yaml
 ```
 
+
+uv run flowctl run --executor opencode --issue "https://github.com/ccijunk/ai-workflow/issues/9" --run-id issue-9 --run-dir flows/runs flows/workflows/spec-to-code.yaml
+
 ### Resume a workflow
 
 If a workflow was interrupted, you can resume from where it stopped:
