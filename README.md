@@ -73,6 +73,37 @@ flowctl run .flows/workflows/spec-to-code.yaml --log-level DEBUG
 | `--log-level` | Log level: DEBUG, INFO, WARNING, ERROR |
 | `--log-format` | Log format: `json` or `text` |
 
+### Path Configuration
+
+By default, flowctl uses `.flows/` for workflow definitions and `.flows/runs/` for run artifacts.
+
+You can customize these paths:
+
+**Config file:**
+
+```yaml
+# .flows/config.yaml
+run_dir: .flows/runs
+workflow_dir: .flows
+```
+
+**CLI options:**
+
+```bash
+# Use custom config location
+flowctl run --config ~/my-config.yaml
+
+# Override run directory
+flowctl run --run-dir ~/runs
+
+# Override workflow directory
+flowctl run --workflow-dir ~/shared-workflows
+```
+
+**Precedence:** CLI options > config values > defaults
+
+**Relative paths** are resolved from current working directory where `flowctl` is executed.
+
 ## Workflow Structure
 
 Workflows are defined in YAML with nodes and transitions:
