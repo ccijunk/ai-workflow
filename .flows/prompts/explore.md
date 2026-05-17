@@ -16,9 +16,17 @@ Read the design document provided in the inputs section below.
 
 ## Output Format
 
-Write to explore.md with:
-- Relevant files found
-- Patterns to follow
-- Files to modify
-- Dependencies to consider
-- Potential conflicts
+Write to `explore.md` with:
+- **Files Found**: List each file with brief description of relevance
+- **Patterns Identified**: Specific code patterns with file:line references
+- **Files to Modify**: List with justification
+- **Dependencies**: External/internal dependencies
+- **Potential Conflicts**: Specific concerns
+
+## Verification Checklist
+
+Before writing explore.md, verify:
+- [ ] Found at least 3 relevant existing files
+- [ ] Identified specific patterns (not just "I explored")
+- [ ] Listed specific files to modify with reasons
+- [ ] Documented file:line references for patterns found

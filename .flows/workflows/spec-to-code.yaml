@@ -2,17 +2,17 @@ version: "1"
 
 nodes:
   fetch_issue:
-    role: fetcher
-    prompt: prompts/fetch-issue.md
-    executor: opencode
+    role: github
+    executor: bash
+    command: scripts/fetch-issue.sh
     inputs: {issue_url: issue-url.txt}
-    outputs: {requirement: requirement.md}
+    outputs: {requirement: requirement.md, repo_root: repo-root.txt}
 
   create_branch:
-    role: pr-creator
-    prompt: prompts/create-branch-issue.md
-    executor: opencode
-    inputs: {requirement: requirement.md, repo_root: repo-root.txt}
+    role: github
+    executor: bash
+    command: scripts/create-branch.sh
+    inputs: {requirement: requirement.md, repo_root: repo-root.txt, issue_url: issue-url.txt}
     outputs: {branch_name: branch-name.txt}
 
   clarify:
@@ -80,8 +80,26 @@ nodes:
     role: developer
     prompt: prompts/implement.md
     executor: opencode
-    inputs: {explore: explore.md, test_design: docs/test-design.md, design: docs/design.md, repo_root: repo-root.txt}
+    inputs:
+      explore: explore.md
+      test_design: docs/test-design.md
+      design: docs/design.md
+      repo_root: repo-root.txt
     outputs: {implementation_md: implementation.md, changes: changes.md}
+
+  lint:
+    role: developer
+    prompt: prompts/lint.md
+    executor: opencode
+    inputs: {implementation: implementation.md}
+    outputs: {lint_pass: lint-pass.txt, lint_report: lint-report.md}
+
+  fix_lint:
+    role: developer
+    prompt: prompts/fix-lint.md
+    executor: opencode
+    inputs: {lint_report: lint-report.md}
+    outputs: {lint_pass: lint-pass.txt}
 
   testing:
     role: tester
@@ -95,13 +113,25 @@ nodes:
     prompt: prompts/fix-test.md
     executor: opencode
     inputs: {test_report: test-report.md}
-    outputs: {fix_md: fix.md}
+    outputs: {fix_md: fix.md, pass: pass.txt}
+
+  reflect:
+    role: meta
+    prompt: prompts/reflect.md
+    executor: opencode
+    inputs: {implementation: implementation.md, repo_root: repo-root.txt}
+    outputs: {code_diff: code-diff.diff, pending_diff: pending.diff}
 
   review:
     role: reviewer
     prompt: prompts/review.md
     executor: opencode
-    inputs: {implementation: implementation.md, test_report: test-report.md}
+    inputs:
+      clarify: clarify.md
+      design: docs/design.md
+      implementation: implementation.md
+      test_report: test-report.md
+      code_diff: code-diff.diff
     outputs: {review_md: review.md, verdict: verdict.txt}
 
   fix_review:
@@ -111,19 +141,16 @@ nodes:
     inputs: {review: review.md}
     outputs: {fix_review_md: fix-review.md}
 
-  reflect:
-    role: meta
-    prompt: prompts/reflect.md
-    executor: opencode
-    inputs: {}
-    outputs: {pending_diff: pending.diff}
-
   create_pr:
-    role: pr-creator
-    prompt: prompts/create-pr-issue.md
-    executor: opencode
-    inputs: {requirement: requirement.md, branch_name: branch-name.txt, repo_root: repo-root.txt, implementation: implementation.md, review: review.md}
+    role: github
+    executor: bash
+    command: scripts/create-pr.sh
+    inputs: {requirement: requirement.md, branch_name: branch-name.txt, repo_root: repo-root.txt, implementation: implementation.md, review: review.md, test_report: test-report.md}
     outputs: {pr_url: pr-url.txt}
+
+# WARNING: Fix loops have no iteration limit
+# Recommended: If fix_test or fix_review loops >10 times,
+# consider manual intervention or failing the workflow
 
 transitions:
   - from: __start__
@@ -170,10 +197,21 @@ transitions:
     to: implement
 
   - from: implement
+    to: lint
+
+  - from: lint
     to: testing
+    when: lint_pass == "yes"
+
+  - from: lint
+    to: fix_lint
+    when: lint_pass == "no"
+
+  - from: fix_lint
+    to: lint
 
   - from: testing
-    to: review
+    to: reflect
     when: pass == "yes"
 
   - from: testing
@@ -181,21 +219,30 @@ transitions:
     when: pass == "no"
 
   - from: fix_test
-    to: implement
+    to: testing
+    when: pass == "yes"
+
+  - from: fix_test
+    to: fix_test
+    when: pass == "no"
+
+  - from: reflect
+    to: review
 
   - from: review
-    to: reflect
+    to: create_pr
     when: verdict == "PASS"
 
   - from: review
     to: fix_review
     when: verdict == "FAIL"
 
-  - from: fix_review
-    to: implement
+  - from: review
+    to: fix_review
+    when: verdict == "PARTIAL"
 
-  - from: reflect
-    to: create_pr
+  - from: fix_review
+    to: testing
 
   - from: create_pr
     to: __end__
