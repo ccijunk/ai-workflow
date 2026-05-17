@@ -1,2 +1,4 @@
 preferred_executor: echo
 framework_version: '0.1.0'
+run_dir: .flows/runs
+workflow_dir: .flows
