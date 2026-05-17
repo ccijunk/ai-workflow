@@ -75,8 +75,9 @@ def status(run_id, target):
 @click.option("--approve", is_flag=True, help="Approve pending human node")
 @click.option("--reject", is_flag=True, help="Reject pending human node")
 @click.option("--reject-reason", default=None, help="Reason for rejection (required with --reject)")
+@click.option("--run-dir", default=None, help="Custom run directory (overrides .flows/runs/<run-id>)")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason):
+def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason, run_dir):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -101,7 +102,10 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         click.echo("Error: --reject-reason is required when using --reject", err=True)
         raise click.Abort()
 
-    run_dir = Path(".flows/runs") / (run_id or "latest")
+    if run_dir:
+        run_dir = Path(run_dir)
+    else:
+        run_dir = Path(".flows/runs") / (run_id or "latest")
     run_dir.mkdir(parents=True, exist_ok=True)
 
     registry = create_default_registry()

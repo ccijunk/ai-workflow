@@ -137,3 +137,32 @@ def test_cli_reject_reason_with_value():
         result = runner.invoke(main, ["run", ".flows/workflows/default.yaml", "--resume", "--reject", "--reject-reason", "Missing details"])
         # May still fail due to no state, but CLI validation should pass
         assert "--reject-reason is required" not in result.output
+
+
+def test_cli_run_dir_option():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        flows_dir = Path(".flows/workflows")
+        flows_dir.mkdir(parents=True)
+        workflow_file = flows_dir / "default.yaml"
+        workflow_file.write_text(
+            "version: '1'\n"
+            "nodes:\n"
+            "  planner:\n"
+            "    role: planner\n"
+            "    prompt: prompts/plan.md\n"
+            "    inputs: {}\n"
+            "    outputs: {spec: spec.md}\n"
+            "transitions:\n"
+            "  - from: __start__\n"
+            "    to: planner\n"
+            "  - from: planner\n"
+            "    to: __end__\n"
+        )
+        
+        # Test custom run-dir
+        custom_run_dir = Path("custom/run/path")
+        result = runner.invoke(main, ["run", "--dry-run", "--run-dir", str(custom_run_dir)])
+        assert result.exit_code == 0
+        assert "Run complete" in result.output
+        assert custom_run_dir.exists()
