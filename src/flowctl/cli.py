@@ -4,6 +4,7 @@ from .init_cmd import run_init
 from .loader import load_workflow, validate_workflow
 from .runner import run_workflow
 from .executors import create_default_registry
+from .path_resolver import resolve_paths
 
 
 @click.group()
@@ -13,41 +14,46 @@ def main():
 
 @main.command()
 @click.option("--target", default=None, help="Target directory")
-def init(target):
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
+def init(target, config):
     """Bootstrap .flows/ directory in the target project."""
-    run_init(target)
+    run_init(target, config)
 
 
 @main.command()
 @click.option("--target", default=None)
-def upgrade(target):
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
+def upgrade(target, config):
     """Reconcile .flows/config.yaml schema for new framework versions."""
     from .upgrade_cmd import run_upgrade
-    run_upgrade(target)
+    run_upgrade(target, config)
 
 
 @main.command()
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
+@click.option("--run-dir", default=None, help="Override run directory")
 @click.option("--run-id", default=None)
-@click.option("--target", default=None)
-def status(run_id, target):
+def status(config, run_dir, run_id):
     """Show workflow run status."""
     from pathlib import Path
     from .state import load_state, WorkflowStatus
     from .runner import MAX_REJECTS
+    from .path_resolver import resolve_paths
     
-    base_dir = Path(target or ".")
-    run_dir = base_dir / ".flows" / "runs" / (run_id or "latest")
+    resolved_run_dir, _ = resolve_paths(config, run_dir, None)
     
-    if not run_dir.exists():
-        click.echo(f"Run directory not found: {run_dir}", err=True)
+    run_dir_path = resolved_run_dir / (run_id or "latest")
+    
+    if not run_dir_path.exists():
+        click.echo(f"Run directory not found: {run_dir_path}", err=True)
         raise click.Abort()
     
-    state = load_state(run_dir)
+    state = load_state(run_dir_path)
     if not state:
-        click.echo(f"No state found in: {run_dir}")
+        click.echo(f"No state found in: {run_dir_path}")
         return
     
-    click.echo(f"Run: {run_dir.name}")
+    click.echo(f"Run: {run_dir_path.name}")
     click.echo(f"Status: {state.status.value.upper()}")
     click.echo(f"Node: {state.current_node}")
     
@@ -58,15 +64,18 @@ def status(run_id, target):
     if state.status == WorkflowStatus.PAUSED:
         if state.pending_approval_for:
             click.echo(f"Pending approval: {state.pending_approval_for}")
-        click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir.name}")
-        click.echo(f"Reject: flowctl run --resume --reject --reject-reason \"<reason>\" --run-id {run_dir.name}")
+        click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir_path.name}")
+        click.echo(f"Reject: flowctl run --resume --reject --reject-reason \"<reason>\" --run-id {run_dir_path.name}")
 
 
 @main.command()
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
 @click.option("--dry-run", is_flag=True)
 @click.option("--executor", default="echo", help="Executor: echo, opencode")
 @click.option("--model", default=None, help="Model for executor (e.g., alibaba-cn/glm-5)")
 @click.option("--agent", default=None, help="Agent name for executor")
+@click.option("--run-dir", default=None, help="Override run directory")
+@click.option("--workflow-dir", default=None, help="Override workflow directory")
 @click.option("--run-id", default=None)
 @click.option("--issue", default=None, help="GitHub issue URL to process")
 @click.option("--log-level", default="INFO", help="Log level: DEBUG, INFO, WARNING, ERROR")
@@ -76,7 +85,7 @@ def status(run_id, target):
 @click.option("--reject", is_flag=True, help="Reject pending human node")
 @click.option("--reject-reason", default=None, help="Reason for rejection (required with --reject)")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason):
+def run(config, dry_run, executor, model, agent, run_dir, workflow_dir, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -101,8 +110,16 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         click.echo("Error: --reject-reason is required when using --reject", err=True)
         raise click.Abort()
 
-    run_dir = Path(".flows/runs") / (run_id or "latest")
-    run_dir.mkdir(parents=True, exist_ok=True)
+    # Resolve paths from config + CLI overrides
+    resolved_run_dir, resolved_workflow_dir = resolve_paths(config, run_dir, workflow_dir)
+    
+    # Override run_id in run_dir if specified
+    if run_id:
+        resolved_run_dir = resolved_run_dir / run_id
+    else:
+        resolved_run_dir = resolved_run_dir / "latest"
+    
+    resolved_run_dir.mkdir(parents=True, exist_ok=True)
 
     registry = create_default_registry()
     
@@ -122,7 +139,7 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
     initial_context = {}
     if issue:
         initial_context["issue_url"] = issue
-        issue_file = run_dir / "issue-url.txt"
+        issue_file = resolved_run_dir / "issue-url.txt"
         issue_file.write_text(issue)
     
     approval_decision = None
@@ -132,13 +149,13 @@ def run(dry_run, executor, model, agent, workflow, run_id, issue, log_level, log
         approval_decision = "no"
 
     result = run_workflow(
-        wf, run_dir,
+        wf, resolved_run_dir,
         registry=registry,
         default_executor=executor,
         executor_config=executor_config,
         dry_run=dry_run,
         initial_context=initial_context,
-        workflow_dir=wf_path.parent.parent,
+        workflow_dir=resolved_workflow_dir,
         log_level=log_level,
         log_format=log_format,
         resume=resume,

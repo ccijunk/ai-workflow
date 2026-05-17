@@ -5,6 +5,8 @@ from typing import Optional
 class FlowctlConfig(BaseModel):
     preferred_executor: str = "echo"
     framework_version: str = "0.1.0"
+    run_dir: str = ".flows/runs"
+    workflow_dir: str = ".flows"
 
 
 class RoleBinding(BaseModel):

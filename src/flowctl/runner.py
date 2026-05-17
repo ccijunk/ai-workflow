@@ -36,13 +36,18 @@ def resolve_executor_config(node: Node) -> dict:
 
 
 def load_flowctl_config(workflow_dir: Path | None) -> FlowctlConfig | None:
+    """Load config from workflow_dir/config.yaml."""
     if not workflow_dir:
-        return None
-    config_path = workflow_dir / ".flows" / "config.yaml"
+        return FlowctlConfig()
+    
+    config_path = workflow_dir / "config.yaml"
     if not config_path.exists():
-        return None
-    raw = yaml.safe_load(config_path.read_text())
-    return FlowctlConfig.model_validate(raw)
+        return FlowctlConfig()
+    
+    import yaml
+    with open(config_path) as f:
+        data = yaml.safe_load(f) or {}
+    return FlowctlConfig(**data)
 
 
 def get_next_transitions(workflow: WorkflowDef, current: str, context: dict) -> list[str]:
