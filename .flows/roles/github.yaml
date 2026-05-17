@@ -1,0 +1,4 @@
+name: github
+model: default
+description: Executes GitHub operations via bash scripts
+executor: bash

@@ -2,16 +2,16 @@ version: "1"
 
 nodes:
   fetch_issue:
-    role: fetcher
-    prompt: prompts/fetch-issue.md
-    executor: opencode
+    role: github
+    executor: bash
+    command: scripts/fetch-issue.sh
     inputs: {issue_url: issue-url.txt}
     outputs: {requirement: requirement.md}
 
   create_branch:
-    role: pr-creator
-    prompt: prompts/create-branch-issue.md
-    executor: opencode
+    role: github
+    executor: bash
+    command: scripts/create-branch.sh
     inputs: {requirement: requirement.md, repo_root: repo-root.txt, issue_url: issue-url.txt}
     outputs: {branch_name: branch-name.txt}
 
@@ -142,9 +142,9 @@ nodes:
     outputs: {fix_review_md: fix-review.md}
 
   create_pr:
-    role: pr-creator
-    prompt: prompts/create-pr-issue.md
-    executor: opencode
+    role: github
+    executor: bash
+    command: scripts/create-pr.sh
     inputs: {requirement: requirement.md, branch_name: branch-name.txt, repo_root: repo-root.txt, implementation: implementation.md, review: review.md, test_report: test-report.md}
     outputs: {pr_url: pr-url.txt}
 
