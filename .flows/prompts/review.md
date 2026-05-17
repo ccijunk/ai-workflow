@@ -79,10 +79,10 @@ Write to `review.md` with sections:
 
 ### 3. Acceptance Criteria
 ```
-| Criteria | Status | Evidence |
-|----------|--------|----------|
-| AC1 | ✅/❌ | test name or code ref |
-| AC2 | ✅/❌ | ... |
+| Criteria ID | Status | Evidence |
+|-------------|--------|----------|
+| [from clarify.md] | ✅/❌/⚠️ | test name or code ref |
+| [from clarify.md] | ✅/❌/⚠️ | ... |
 | ... | ... | ... |
 ```
 
@@ -106,15 +106,14 @@ Write to `verdict.txt`:
 **PASS** only if ALL conditions met:
 - All clarify.md requirements implemented
 - All design.md components exist
-- All Functional AC verified
-- All Non-Functional AC met
+- All acceptance criteria verified
 - Code quality acceptable
 - Tests passing with adequate coverage
 
 **FAIL** if ANY of these:
 - Any requirement from clarify.md missing
 - Any design.md component missing
-- Any Functional AC not verified
+- Any acceptance criteria not verified
 - Critical code quality issue
 - Tests failing
 
