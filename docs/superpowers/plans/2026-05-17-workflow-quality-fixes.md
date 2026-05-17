@@ -393,18 +393,36 @@ git commit -m "feat: implement prompts now execute fixes, not just plan"
 
 - [ ] **Step 1: Remove hardcoded path**
 
-Read `.flows/prompts/create-branch-issue.md` and find hardcoded path reference. Replace with:
+Replace the entire `.flows/prompts/create-branch-issue.md` file:
 
 ```markdown
+# Create Branch
+
+## Input
+
+Read `requirement.md` to understand the issue title.
+Read `issue-url.txt` to get the issue URL and extract the issue number.
 Read `repo-root.txt` to get the repository root path.
 
-## Steps
+## Task
+
 1. cd to the path from repo-root.txt
 2. Extract issue number from issue-url.txt
-...
-```
+3. Create branch named `issue-<number>-<slug-from-title>`:
+   ```bash
+   gh issue view <number> --json title
+   # Extract slug from title, lowercase, replace spaces with dashes
+   git checkout -b issue-<number>-<slug>
+   ```
+4. Push branch to origin:
+   ```bash
+   git push -u origin issue-<number>-<slug>
+   ```
 
-(Remove any hardcoded `/home/laeq/code/harness/ai-workflow` paths)
+## Output
+
+Write to `branch-name.txt`: The created branch name (e.g., `issue-9-bash-executor`)
+```
 
 - [ ] **Step 2: Commit branch prompt fix**
 
@@ -716,72 +734,163 @@ git commit -m "feat: review now requires git diff verification and security chec
 **Files:**
 - Modify: `.flows/workflows/spec-to-code.yaml`
 
-- [ ] **Step 1: Add fix inputs to implement node**
+- [ ] **Step 1: Replace entire workflow YAML file**
 
-Find the `implement` node (lines 79-85) and add inputs:
-
-```yaml
-implement:
-  role: developer
-  prompt: prompts/implement.md
-  executor: opencode
-  inputs:
-    explore: explore.md
-    test_design: docs/test-design.md
-    design: docs/design.md
-    repo_root: repo-root.txt
-    fix: fix.md              # NEW
-    fix_review: fix-review.md # NEW
-  outputs:
-    implementation_md: implementation.md
-    changes: changes.md
-```
-
-- [ ] **Step 2: Add lint and fix_lint nodes**
-
-Add after `implement` node definition:
+Replace `.flows/workflows/spec-to-code.yaml` with:
 
 ```yaml
-lint:
-  role: developer
-  prompt: prompts/lint.md
-  executor: opencode
-  inputs: {implementation: implementation.md}
-  outputs: {lint_pass: lint-pass.txt, lint_report: lint-report.md}
+version: "1"
 
-fix_lint:
-  role: developer
-  prompt: prompts/fix-lint.md
-  executor: opencode
-  inputs: {lint_report: lint-report.md}
-  outputs: {lint_pass: lint-pass.txt}
-```
+nodes:
+  fetch_issue:
+    role: fetcher
+    prompt: prompts/fetch-issue.md
+    executor: opencode
+    inputs: {issue_url: issue-url.txt}
+    outputs: {requirement: requirement.md}
 
-- [ ] **Step 3: Update review node inputs**
+  create_branch:
+    role: pr-creator
+    prompt: prompts/create-branch-issue.md
+    executor: opencode
+    inputs: {requirement: requirement.md, repo_root: repo-root.txt}
+    outputs: {branch_name: branch-name.txt}
 
-Find the `review` node (lines 100-105) and add inputs:
+  clarify:
+    role: ba
+    prompt: prompts/clarity.md
+    executor: opencode
+    inputs: {requirement: requirement.md}
+    outputs: {clarify_md: clarify.md}
 
-```yaml
-review:
-  role: reviewer
-  prompt: prompts/review.md
-  executor: opencode
-  inputs:
-    clarify: clarify.md           # NEW
-    design: docs/design.md        # NEW
-    implementation: implementation.md
-    test_report: test-report.md
-    code_diff: code-diff.diff     # NEW
-  outputs:
-    review_md: review.md
-    verdict: verdict.txt
-```
+  human_confirm_clarify:
+    role: human
+    prompt: prompts/human-confirm-clarify.md
+    executor: human
+    inputs: {clarify: clarify.md}
+    outputs: {clarify_approved: clarify-approved.txt}
 
-- [ ] **Step 4: Update transitions for lint**
+  reclarify:
+    role: ba
+    prompt: prompts/reclarify.md
+    executor: opencode
+    inputs: {clarify: clarify.md, reject_reason: reject-reason.txt}
+    outputs: {clarify_md: clarify.md}
 
-Replace transitions from implement (lines 172-174):
+  design:
+    role: architect
+    prompt: prompts/design.md
+    executor: opencode
+    inputs: {clarify: clarify.md, architecture: ARCHITECTURE.md}
+    outputs: {design_md: docs/design.md}
 
-```yaml
+  test_design:
+    role: test-arch
+    prompt: prompts/test-design.md
+    executor: opencode
+    inputs: {design: docs/design.md, architecture: ARCHITECTURE.md}
+    outputs: {test_design_md: docs/test-design.md}
+
+  human_confirm_design:
+    role: human
+    prompt: prompts/human-confirm-design.md
+    executor: human
+    inputs: {design: docs/design.md, test_design: docs/test-design.md}
+    outputs: {design_approved: design-approved.txt}
+
+  redesign:
+    role: architect
+    prompt: prompts/redesign.md
+    executor: opencode
+    inputs:
+      design: docs/design.md
+      test_design: docs/test-design.md
+      reject_reason: reject-reason.txt
+    outputs:
+      design_md: docs/design.md
+      test_design_md: docs/test-design.md
+
+  explore:
+    role: developer
+    prompt: prompts/explore.md
+    executor: opencode
+    inputs: {design: docs/design.md}
+    outputs: {explore_md: explore.md}
+
+  implement:
+    role: developer
+    prompt: prompts/implement.md
+    executor: opencode
+    inputs:
+      explore: explore.md
+      test_design: docs/test-design.md
+      design: docs/design.md
+      repo_root: repo-root.txt
+      fix: fix.md
+      fix_review: fix-review.md
+    outputs: {implementation_md: implementation.md, changes: changes.md}
+
+  lint:
+    role: developer
+    prompt: prompts/lint.md
+    executor: opencode
+    inputs: {implementation: implementation.md}
+    outputs: {lint_pass: lint-pass.txt, lint_report: lint-report.md}
+
+  fix_lint:
+    role: developer
+    prompt: prompts/fix-lint.md
+    executor: opencode
+    inputs: {lint_report: lint-report.md}
+    outputs: {lint_pass: lint-pass.txt}
+
+  testing:
+    role: tester
+    prompt: prompts/testing.md
+    executor: opencode
+    inputs: {implementation: implementation.md}
+    outputs: {test_report: test-report.md, pass: pass.txt}
+
+  fix_test:
+    role: developer
+    prompt: prompts/fix-test.md
+    executor: opencode
+    inputs: {test_report: test-report.md}
+    outputs: {fix_md: fix.md, pass: pass.txt}
+
+  reflect:
+    role: meta
+    prompt: prompts/reflect.md
+    executor: opencode
+    inputs: {implementation: implementation.md, repo_root: repo-root.txt}
+    outputs: {code_diff: code-diff.diff, pending_diff: pending.diff}
+
+  review:
+    role: reviewer
+    prompt: prompts/review.md
+    executor: opencode
+    inputs:
+      clarify: clarify.md
+      design: docs/design.md
+      implementation: implementation.md
+      test_report: test-report.md
+      code_diff: code-diff.diff
+    outputs: {review_md: review.md, verdict: verdict.txt}
+
+  fix_review:
+    role: developer
+    prompt: prompts/fix-review.md
+    executor: opencode
+    inputs: {review: review.md, fix: fix.md}
+    outputs: {fix_review_md: fix-review.md}
+
+  create_pr:
+    role: pr-creator
+    prompt: prompts/create-pr-issue.md
+    executor: opencode
+    inputs: {requirement: requirement.md, branch_name: branch-name.txt, repo_root: repo-root.txt, implementation: implementation.md, review: review.md, test_report: test-report.md}
+    outputs: {pr_url: pr-url.txt}
+
 # WARNING: Fix loops have no iteration limit
 # Recommended: If fix_test or fix_review loops >10 times,
 # consider manual intervention or failing the workflow
@@ -830,7 +939,6 @@ transitions:
   - from: explore
     to: implement
 
-  # LINT GATE
   - from: implement
     to: lint
 
@@ -845,7 +953,6 @@ transitions:
   - from: fix_lint
     to: lint
 
-  # TESTING
   - from: testing
     to: reflect
     when: pass == "yes"
@@ -860,9 +967,8 @@ transitions:
 
   - from: fix_test
     to: fix_test
-    when: pass == "no"  # NOTE: May loop infinitely
+    when: pass == "no"
 
-  # REVIEW (reflect generates diff before review)
   - from: reflect
     to: review
 
@@ -876,17 +982,27 @@ transitions:
 
   - from: review
     to: fix_review
-    when: verdict == "PARTIAL"  # NEW
+    when: verdict == "PARTIAL"
 
   - from: fix_review
     to: testing
 
-  # PR
   - from: create_pr
     to: __end__
 ```
 
-- [ ] **Step 5: Commit workflow YAML**
+Key changes:
+- Added `fix` and `fix_review` inputs to implement node
+- Added `lint` and `fix_lint` nodes
+- Added `clarify`, `design`, `code_diff` inputs to review node
+- Changed reflect position: `testing → reflect → review` (reflect generates diff before review)
+- Added `pass` output to fix_test node (fix_test now self-validates)
+- Added PARTIAL verdict transition
+- Changed fix_test → testing (not implement)
+- Changed fix_review → testing (not implement)
+- Added iteration warning comment
+
+- [ ] **Step 2: Commit workflow YAML**
 
 ```bash
 git add .flows/workflows/spec-to-code.yaml
