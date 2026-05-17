@@ -1,33 +1,47 @@
 # Create Pull Request
 
-Use bash tool to create a GitHub PR for the issue.
+## Input
+
+Read these files to build PR content:
+- `requirement.md` - Original issue/requirement
+- `implementation.md` - What was implemented
+- `test-report.md` - Testing results
+- `review.md` - Review summary
+- `branch-name.txt` - Branch name
+- `issue-url.txt` - Issue URL (extract issue number)
+- `repo-root.txt` - Repository root path
 
 ## Task
 
-The repo root is: /home/laeq/code/harness/ai-workflow
-The branch is: issue-1-role-config
+Create PR using gh CLI:
 
-## Execute with bash tool:
-
-`cd /home/laeq/code/harness/ai-workflow && gh pr create --title "feat: add role binding config and role prompt (issue #1)" --body "$(cat <<'BODY'
+```bash
+cd $(cat repo-root.txt)
+gh pr create --title "<derive from requirement.md>" --body "$(cat <<'BODY'
 ## Summary
 
-Implements role binding configuration and role prompt system from issue #1.
+<extract key points from requirement.md>
 
 ## Changes
 
-- Added RoleBinding model for node-specific role configurations
-- Extended RoleConfig with bindings field
-- Created role YAML files with model bindings
+<extract from implementation.md>
 
 ## Testing
 
-Workflow tested successfully.
+<extract from test-report.md>
 
-Closes #1
+## Review Notes
+
+<extract from review.md>
+
+Closes #<issue-number>
 BODY
-)"`
+)"
+```
 
-## Output
+## Important
 
-Use write tool to create `pr-url.txt` with the PR URL from gh pr create output.
+- PR title should match issue title or summarize feature
+- Body should be built from actual workflow artifacts
+- Include test coverage information
+- Include review verdict
