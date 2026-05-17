@@ -185,7 +185,7 @@ git commit -m "fix: make review.md adaptive to clarify.md format"
 - Modify: `.flows/prompts/fix-review.md`
 - Modify: `.flows/prompts/explore.md`
 
-- [ ] **Step 1: Update implement.md for fix iterations**
+- [ ] **Step 1: Update implement.md**
 
 Replace `.flows/prompts/implement.md`:
 
@@ -201,25 +201,8 @@ Read ALL input files provided:
 - `docs/test-design.md` - test strategy
 - `docs/design.md` - technical design
 - `repo-root.txt` - repository root path
-- `fix.md` - (if exists) test failure analysis and fix plan
-- `fix-review.md` - (if exists) review findings to address
 
-## Critical First Step
-
-If `fix.md` exists in run directory, you are in a FIX iteration:
-1. Read fix.md to understand what tests failed
-2. Apply the planned fixes using edit/write tools
-3. Run tests: `uv run pytest tests/ -v`
-4. If tests still fail, diagnose and fix again
-
-If `fix-review.md` exists, you are addressing review feedback:
-1. Read each issue identified in fix-review.md
-2. Make the necessary changes using edit/write tools
-3. Run tests to verify changes work
-
-If neither fix file exists, proceed with normal implementation.
-
-## Task (Normal Implementation)
+## Task
 
 1. Create implementation plan in `implementation.md`
 2. **Write/Edit actual code files** in the repo:
@@ -235,7 +218,7 @@ If neither fix file exists, proceed with normal implementation.
 
 ## Verification (REQUIRED)
 
-After implementing or fixing, you MUST verify:
+After implementing, you MUST verify:
 1. Run tests: `uv run pytest tests/ -v`
 2. Run lint: `uv run ruff check .`
 3. Run type check: `uv run mypy src/` (if applicable)
@@ -826,8 +809,6 @@ nodes:
       test_design: docs/test-design.md
       design: docs/design.md
       repo_root: repo-root.txt
-      fix: fix.md
-      fix_review: fix-review.md
     outputs: {implementation_md: implementation.md, changes: changes.md}
 
   lint:
@@ -992,14 +973,13 @@ transitions:
 ```
 
 Key changes:
-- Added `fix` and `fix_review` inputs to implement node
 - Added `lint` and `fix_lint` nodes
 - Added `clarify`, `design`, `code_diff` inputs to review node
 - Changed reflect position: `testing → reflect → review` (reflect generates diff before review)
 - Added `pass` output to fix_test node (fix_test now self-validates)
 - Added PARTIAL verdict transition
-- Changed fix_test → testing (not implement)
-- Changed fix_review → testing (not implement)
+- Changed fix_test → testing (fix nodes execute fixes directly, not via implement)
+- Changed fix_review → testing (fix nodes execute fixes directly)
 - Added iteration warning comment
 
 - [ ] **Step 2: Commit workflow YAML**
