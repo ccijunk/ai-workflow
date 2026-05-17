@@ -22,10 +22,11 @@ def init(target, config):
 
 @main.command()
 @click.option("--target", default=None)
-def upgrade(target):
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
+def upgrade(target, config):
     """Reconcile .flows/config.yaml schema for new framework versions."""
     from .upgrade_cmd import run_upgrade
-    run_upgrade(target)
+    run_upgrade(target, config)
 
 
 @main.command()
