@@ -28,27 +28,30 @@ def upgrade(target):
 
 
 @main.command()
+@click.option("--config", default=".flows/config.yaml", help="Config file path")
+@click.option("--run-dir", default=None, help="Override run directory")
 @click.option("--run-id", default=None)
-@click.option("--target", default=None)
-def status(run_id, target):
+def status(config, run_dir, run_id):
     """Show workflow run status."""
     from pathlib import Path
     from .state import load_state, WorkflowStatus
     from .runner import MAX_REJECTS
+    from .path_resolver import resolve_paths
     
-    base_dir = Path(target or ".")
-    run_dir = base_dir / ".flows" / "runs" / (run_id or "latest")
+    resolved_run_dir, _ = resolve_paths(config, run_dir, None)
     
-    if not run_dir.exists():
-        click.echo(f"Run directory not found: {run_dir}", err=True)
+    run_dir_path = resolved_run_dir / (run_id or "latest")
+    
+    if not run_dir_path.exists():
+        click.echo(f"Run directory not found: {run_dir_path}", err=True)
         raise click.Abort()
     
-    state = load_state(run_dir)
+    state = load_state(run_dir_path)
     if not state:
-        click.echo(f"No state found in: {run_dir}")
+        click.echo(f"No state found in: {run_dir_path}")
         return
     
-    click.echo(f"Run: {run_dir.name}")
+    click.echo(f"Run: {run_dir_path.name}")
     click.echo(f"Status: {state.status.value.upper()}")
     click.echo(f"Node: {state.current_node}")
     
@@ -59,8 +62,8 @@ def status(run_id, target):
     if state.status == WorkflowStatus.PAUSED:
         if state.pending_approval_for:
             click.echo(f"Pending approval: {state.pending_approval_for}")
-        click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir.name}")
-        click.echo(f"Reject: flowctl run --resume --reject --reject-reason \"<reason>\" --run-id {run_dir.name}")
+        click.echo(f"Approve: flowctl run --resume --approve --run-id {run_dir_path.name}")
+        click.echo(f"Reject: flowctl run --resume --reject --reject-reason \"<reason>\" --run-id {run_dir_path.name}")
 
 
 @main.command()

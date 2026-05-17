@@ -224,3 +224,33 @@ def test_run_run_dir_option():
             assert Path(temp_run_dir).joinpath('test-cli-override').exists()
     finally:
         shutil.rmtree(temp_run_dir, ignore_errors=True)
+
+
+def test_status_run_dir_option():
+    """status command uses --run-dir option."""
+    import json
+    
+    runner = CliRunner()
+    temp_run_dir = Path(tempfile.mkdtemp()) / "test-status-run"
+    temp_run_dir.mkdir(parents=True)
+    
+    # Create minimal state.json
+    state = {
+        "current_node": "test_node",
+        "context": {},
+        "iterations": 0,
+        "status": "running"
+    }
+    (temp_run_dir / "state.json").write_text(json.dumps(state))
+    
+    result = runner.invoke(main, [
+        'status',
+        '--run-dir', str(temp_run_dir.parent),
+        '--run-id', 'test-status-run',
+    ])
+    
+    assert result.exit_code == 0
+    assert 'test-status-run' in result.output
+    
+    # Cleanup
+    shutil.rmtree(temp_run_dir.parent)
