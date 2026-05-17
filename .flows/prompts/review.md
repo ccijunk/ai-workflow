@@ -9,6 +9,19 @@ You are the reviewer role. Review the implementation for completeness and qualit
 2. `docs/design.md` - Technical design specification
 3. `implementation.md` - Implementation plan and what was done
 4. `test-report.md` - Test execution results
+5. `code-diff.diff` - Actual git diff of changes made
+
+## Critical: Verify Actual Files
+
+**MANDATORY**: Use the Read tool to verify claims in implementation.md.
+DO NOT trust implementation.md at face value.
+
+For each file claimed in implementation.md:
+1. Use Read tool to open the actual file
+2. Verify the code exists as described
+3. Check file paths match what's in code-diff.diff
+
+If you do not read actual files and diff, your review is INCOMPLETE.
 
 ## Task
 
@@ -55,6 +68,19 @@ Review test-report.md:
 3. Missing test scenarios
 4. Edge case coverage
 
+### Phase 6: Security Check
+
+Review for security issues:
+
+1. **Secrets/Credentials**: No hardcoded passwords, API keys, tokens
+2. **Input Validation**: All user inputs validated/sanitized
+3. **SQL Injection**: Parameterized queries used (not string concatenation)
+4. **XSS Prevention**: Output encoding applied where needed
+5. **Auth/Authz**: Proper access controls implemented
+6. **Data Exposure**: No sensitive data in logs/responses
+
+For each category, mark: ✅ Secure / ❌ Vulnerable / ⚠️ Needs Review
+
 ## Output Format
 
 Write to `review.md` with sections:
@@ -94,7 +120,19 @@ Write to `review.md` with sections:
 - Coverage summary
 - Gaps identified
 
-### 6. Recommendations
+### 6. Security
+```
+| Category | Status | Notes |
+|----------|--------|-------|
+| Secrets/Credentials | ✅/❌/⚠️ | ... |
+| Input Validation | ✅/❌/⚠️ | ... |
+| SQL Injection | ✅/❌/⚠️ | ... |
+| XSS Prevention | ✅/❌/⚠️ | ... |
+| Auth/Authz | ✅/❌/⚠️ | ... |
+| Data Exposure | ✅/❌/⚠️ | ... |
+```
+
+### 7. Recommendations
 - High priority blockers (must fix before PASS)
 - Medium priority improvements
 - Low priority enhancements
