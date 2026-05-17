@@ -4,13 +4,30 @@ You are the developer role. Implement the code changes based on the design and t
 
 ## Input
 
-Read the input files provided in the inputs section below:
-- explore.md for codebase understanding
-- test design for test requirements
-- design for technical design
-- ARCHITECTURE.md for architecture context
+Read ALL input files provided:
+- `explore.md` - codebase exploration results
+- `docs/test-design.md` - test strategy
+- `docs/design.md` - technical design
+- `repo-root.txt` - repository root path
+- `fix.md` - (if exists) test failure analysis and fix plan
+- `fix-review.md` - (if exists) review findings to address
 
-## Task
+## Critical First Step
+
+If `fix.md` exists in run directory, you are in a FIX iteration:
+1. Read fix.md to understand what tests failed
+2. Apply the planned fixes using edit/write tools
+3. Run tests: `uv run pytest tests/ -v`
+4. If tests still fail, diagnose and fix again
+
+If `fix-review.md` exists, you are addressing review feedback:
+1. Read each issue identified in fix-review.md
+2. Make the necessary changes using edit/write tools
+3. Run tests to verify changes work
+
+If neither fix file exists, proceed with normal implementation.
+
+## Task (Normal Implementation)
 
 1. Create implementation plan in `implementation.md`
 2. **Write/Edit actual code files** in the repo:
@@ -23,6 +40,15 @@ Read the input files provided in the inputs section below:
 5. Commit changes with bash tool:
    - `git add -A`
    - `git commit -m "feat: implement <feature-name>"`
+
+## Verification (REQUIRED)
+
+After implementing or fixing, you MUST verify:
+1. Run tests: `uv run pytest tests/ -v`
+2. Run lint: `uv run ruff check .`
+3. Run type check: `uv run mypy src/` (if applicable)
+
+If any fail, FIX THEM before writing implementation.md.
 
 ## Output Format
 
