@@ -14,7 +14,14 @@ class PromptProcessor:
         pass
     
     def _generate_input_section(self, inputs: dict[str, str]) -> str:
-        pass
+        if not inputs:
+            return ""
+        
+        lines = ["## Input", ""]
+        for key, filename in inputs.items():
+            lines.append(f"- {key}: Read from {filename}")
+        
+        return "\n".join(lines)
     
     def _generate_output_section(self, outputs: dict[str, str]) -> str:
         pass
