@@ -24,7 +24,14 @@ class PromptProcessor:
         return "\n".join(lines)
     
     def _generate_output_section(self, outputs: dict[str, str]) -> str:
-        pass
+        if not outputs:
+            return ""
+        
+        lines = ["## Output", ""]
+        for key, filename in outputs.items():
+            lines.append(f"- {key}: Write to {filename}")
+        
+        return "\n".join(lines)
     
     def _should_process(self, node: Node) -> bool:
         return node.executor != "bash"

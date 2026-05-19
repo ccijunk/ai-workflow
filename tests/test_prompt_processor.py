@@ -79,3 +79,42 @@ def test_generate_input_section_single_input():
 - clarify: Read from clarify.md"""
     
     assert result == expected
+
+
+def test_generate_output_section_with_outputs():
+    processor = PromptProcessor()
+    outputs = {
+        "design_md": "docs/design.md",
+        "test_design_md": "docs/test-design.md"
+    }
+    
+    result = processor._generate_output_section(outputs)
+    
+    expected = """## Output
+
+- design_md: Write to docs/design.md
+- test_design_md: Write to docs/test-design.md"""
+    
+    assert result == expected
+
+
+def test_generate_output_section_empty():
+    processor = PromptProcessor()
+    outputs = {}
+    
+    result = processor._generate_output_section(outputs)
+    
+    assert result == ""
+
+
+def test_generate_output_section_single_output():
+    processor = PromptProcessor()
+    outputs = {"implementation_md": "implementation.md"}
+    
+    result = processor._generate_output_section(outputs)
+    
+    expected = """## Output
+
+- implementation_md: Write to implementation.md"""
+    
+    assert result == expected
