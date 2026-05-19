@@ -1,43 +1,25 @@
-# Clarify Requirements
+# BA — Clarify Domain Model
 
-You are the business analyst role. Clarify and refine the requirements.
-
-## Input
-
-Read the requirement from `requirement.md` in the run directory.
+## Role
+Read your role prompt and learned heuristics from `memory/ba.md`.
 
 ## Task
+Given the issue and requirement, produce `clarify.md` with:
 
-1. Analyze the requirement
-2. Identify ambiguities or missing details
-3. Break down into specific sub-requirements
-4. Define acceptance criteria with explicit IDs
-5. Identify dependencies
+**Problem statement:** One paragraph in business terms describing what the software must do.
 
-## Output Format
+**Domain entities:** Table with columns: entity name | brief definition | key attributes
 
-Write clarified requirements to `clarify.md` with sections:
+**Business rules:** Numbered list. Each rule must be independently statable. Flag contradictions explicitly.
 
-## Requirement Summary
-[One paragraph summary of the issue/request]
+**Lifecycle coverage:** Table with columns: Phase | Key events | Rules that apply | Exit condition
+- All four rows required: Create, Operate, Edge case, Terminate
 
-## Sub-Requirements
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| R1 | [First sub-requirement] | High |
-| R2 | [Second sub-requirement] | Medium |
-| R3 | [Third sub-requirement] | Low |
+**Bounded contexts:** Domain partitions and their interfaces. "N/A — single context" is valid.
 
-## Acceptance Criteria
-| ID | Criteria | Type |
-|----|----------|------|
-| AC1 | [Functional criterion 1] | Functional |
-| AC2 | [Functional criterion 2] | Functional |
-| NF1 | [Non-functional criterion] | Non-Functional |
-| EC1 | [Edge case criterion] | Edge Case |
+**Acceptance criteria:** Given/When/Then format. One criterion per lifecycle phase.
 
-## Dependencies
-[List of dependencies identified]
+**Open questions:** Unresolved business questions for architect to evaluate.
 
-## Questions for Stakeholder
-[Any clarifying questions]
+## Feedback (if retry)
+If `domain-review.md` and `reject-reason.txt` are provided, address the specific issues raised. Re-evaluate your domain model against the feedback.
