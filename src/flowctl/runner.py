@@ -182,16 +182,17 @@ def run_workflow(
 
         # Load prompt file
         prompt_content = ""
-        if workflow_dir:
-            prompt_file = workflow_dir / node_def.prompt
-        else:
-            prompt_file = run_dir / node_def.prompt
+        if node_def.prompt:
+            if workflow_dir:
+                prompt_file = workflow_dir / node_def.prompt
+            else:
+                prompt_file = run_dir / node_def.prompt
 
-        if prompt_file.exists():
-            prompt_content = prompt_file.read_text()
-        else:
-            logger.log_warning(f"Prompt file not found: {prompt_file}")
-            prompt_content = ""
+            if prompt_file.exists():
+                prompt_content = prompt_file.read_text()
+            else:
+                logger.log_warning(f"Prompt file not found: {prompt_file}")
+                prompt_content = ""
 
         # Process prompt
         process_context = {

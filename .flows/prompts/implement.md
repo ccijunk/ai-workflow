@@ -1,47 +1,28 @@
-# Implement Phase
+# Developer — Implement with TDD
 
-You are the developer role. Implement the code changes based on the design and test plan.
+## Role
+Read your role prompt and learned heuristics from `memory/developer.md`.
 
 ## Task
+Given the design and test-design, implement code following TDD:
 
-1. Create implementation plan in `implementation.md`
-2. **Write/Edit actual code files** in the repo:
-   - Use edit tool to modify existing files
-   - Use write tool to create new files
-   - Follow the design.md architecture
-   - Ensure code is complete and functional
-3. Write tests as specified in test-design.md
-4. Run tests to verify implementation: `uv run pytest tests/ -v`
-5. Commit changes with bash tool:
-   - `git add -A`
-   - `git commit -m "feat: implement <feature-name>"`
+**Process:**
+1. Read test-design feature test cases for unit test IDs you own
+2. Write unit tests first (one test ID at a time)
+3. Implement minimal code to pass each test
+4. Document decisions in `implementation.md`
 
-## Verification (REQUIRED)
+**implementation.md structure:**
 
-After implementing, you MUST verify:
-1. Run tests: `uv run pytest tests/ -v`
-2. Run lint: `uv run ruff check .`
-3. Run type check: `uv run mypy src/` (if applicable)
+**Summary:** One paragraph: what was built.
 
-If any fail, FIX THEM before writing implementation.md.
+**Code structure:** File/module layout. Tree form.
 
-## Output Format
+**TDD trace:** Table: test ID | decision made | rationale
 
-Create two files:
+**Key implementation decisions:** Choices that deviate from or extend design.md.
 
-1. `implementation.md` - Implementation plan with:
-   - Files modified/created
-   - Key code changes
-   - Test coverage
+**Known limitations:** Deferred items, workarounds, intentional tech debt.
 
-2. `changes.md` - Summary of actual changes:
-   - What was implemented
-   - Files changed
-   - Commit hash
-
-## Important
-
-- You MUST write/edit actual code files, not just plan
-- Code must be complete and functional
-- Tests must pass after implementation
-- Commit after successful implementation
+## Feedback (if retry)
+If `code-review.md` and `reject-reason.txt` are provided, address DDD violations flagged. Preserve domain integrity, respect bounded context boundaries.

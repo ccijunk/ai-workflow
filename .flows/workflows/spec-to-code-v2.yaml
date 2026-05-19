@@ -1,0 +1,221 @@
+version: "1"
+
+nodes:
+  fetch_issue:
+    role: github
+    executor: bash
+    command: scripts/fetch-issue.sh
+    inputs: {issue_url: issue-url.txt}
+    outputs: {requirement: requirement.md, repo_root: repo-root.txt}
+
+  create_branch:
+    role: github
+    executor: bash
+    command: scripts/create-branch.sh
+    inputs: {requirement: requirement.md, repo_root: repo-root.txt, issue_url: issue-url.txt}
+    outputs: {branch_name: branch-name.txt}
+
+  ba:
+    role: ba
+    prompt: prompts/clarity.md
+    executor: opencode
+    inputs:
+      issue: issue.md
+      requirement: requirement.md
+      memory_ba: memory/ba.md
+      domain_review: domain-review.md
+      reject_reason: reject-reason.txt
+    outputs: {clarify_md: clarify.md}
+
+  human_domain_gate:
+    role: human
+    prompt: prompts/domain-review.md
+    executor: human
+    inputs: {clarify: clarify.md}
+    outputs: {verdict: verdict.txt, domain_review: domain-review.md}
+
+  architect:
+    role: architect
+    prompt: prompts/design.md
+    executor: opencode
+    inputs:
+      clarify: clarify.md
+      memory_architect: memory/architect.md
+      testability_review: testability-review.md
+      reject_reason: reject-reason.txt
+    outputs: {design_md: design.md}
+
+  human_testability_gate:
+    role: human
+    prompt: prompts/testability-review.md
+    executor: human
+    inputs: {design: design.md, clarify: clarify.md}
+    outputs: {verdict: verdict.txt, testability_review: testability-review.md}
+
+  test_arch:
+    role: test-arch
+    prompt: prompts/test-design.md
+    executor: opencode
+    inputs:
+      design: design.md
+      clarify: clarify.md
+      memory_test_arch: memory/test-arch.md
+    outputs: {test_design_md: test-design.md}
+
+  developer:
+    role: developer
+    prompt: prompts/implement.md
+    executor: opencode
+    inputs:
+      design: design.md
+      test_design: test-design.md
+      repo_root: repo-root.txt
+      memory_developer: memory/developer.md
+      code_review: code-review.md
+      reject_reason: reject-reason.txt
+    outputs: {implementation_md: implementation.md}
+
+  human_code_review:
+    role: human
+    prompt: prompts/code-review.md
+    executor: human
+    inputs: {implementation: implementation.md, design: design.md}
+    outputs: {verdict: verdict.txt, code_review: code-review.md}
+
+  test_developer:
+    role: test-developer
+    prompt: prompts/test-develop.md
+    executor: opencode
+    inputs:
+      test_design: test-design.md
+      design: design.md
+      memory_test_developer: memory/test-developer.md
+      test_review: test-review.md
+      reject_reason: reject-reason.txt
+    outputs: {test_results_md: test-results.md}
+
+  human_test_review:
+    role: human
+    prompt: prompts/test-review.md
+    executor: human
+    inputs: {test_results: test-results.md, test_design: test-design.md}
+    outputs: {verdict: verdict.txt, test_review: test-review.md}
+
+  final_review:
+    role: reviewer
+    prompt: prompts/final-review.md
+    executor: opencode
+    inputs:
+      implementation: implementation.md
+      code_review: code-review.md
+      test_results: test-results.md
+      test_review: test-review.md
+      clarify: clarify.md
+      design: design.md
+      memory_reviewer: memory/reviewer.md
+    outputs: {final_review_md: final-review.md}
+
+  reflect:
+    role: meta
+    prompt: prompts/reflect.md
+    executor: opencode
+    inputs:
+      clarify: clarify.md
+      design: design.md
+      implementation: implementation.md
+      test_results: test-results.md
+      code_review: code-review.md
+      test_review: test-review.md
+      final_review: final-review.md
+      memory_ba: memory/ba.md
+      memory_architect: memory/architect.md
+      memory_test_arch: memory/test-arch.md
+      memory_developer: memory/developer.md
+      memory_test_developer: memory/test-developer.md
+    outputs:
+      reflect_md: reflect.md
+      memory_ba_updated: memory/ba.md
+      memory_architect_updated: memory/architect.md
+      memory_test_arch_updated: memory/test-arch.md
+      memory_developer_updated: memory/developer.md
+      memory_test_developer_updated: memory/test-developer.md
+      memory_reviewer_updated: memory/reviewer.md
+
+  create_pr:
+    role: github
+    executor: bash
+    command: scripts/create-pr.sh
+    inputs:
+      requirement: requirement.md
+      branch_name: branch-name.txt
+      repo_root: repo-root.txt
+      implementation: implementation.md
+      review: final-review.md
+      test_report: test-results.md
+    outputs: {pr_url: pr-url.txt}
+
+transitions:
+  - from: __start__
+    to: fetch_issue
+
+  - from: fetch_issue
+    to: create_branch
+
+  - from: create_branch
+    to: ba
+
+  - from: ba
+    to: human_domain_gate
+
+  - from: human_domain_gate
+    to: architect
+    when: verdict == "APPROVED"
+
+  - from: human_domain_gate
+    to: ba
+    when: verdict == "BLOCKED"
+
+  - from: architect
+    to: human_testability_gate
+
+  - from: human_testability_gate
+    to: test_arch
+    when: verdict == "APPROVED"
+
+  - from: human_testability_gate
+    to: architect
+    when: verdict == "BLOCKED"
+
+  - from: test_arch
+    to: developer
+
+  - from: developer
+    to: human_code_review
+
+  - from: human_code_review
+    to: test_developer
+    when: verdict == "APPROVED"
+
+  - from: human_code_review
+    to: developer
+    when: verdict == "BLOCKED"
+
+  - from: test_developer
+    to: human_test_review
+
+  - from: human_test_review
+    to: final_review
+    when: verdict == "APPROVED"
+
+  - from: human_test_review
+    to: test_developer
+    when: verdict == "BLOCKED"
+
+  - from: final_review
+    to: reflect
+
+  - from: reflect
+    to: create_pr
+
+  - from: create_pr
+    to: __end__

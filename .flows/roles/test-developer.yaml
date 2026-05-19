@@ -1,0 +1,4 @@
+name: test-developer
+model: claude-3-opus
+description: Test-Developer role responsible for integration and E2E tests
+executor: opencode
