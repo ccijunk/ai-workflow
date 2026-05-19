@@ -522,3 +522,56 @@ def test_workflow_multiple_reject_cycles(tmp_path):
     state = load_state(tmp_path)
     assert state is not None
     assert state.status == WorkflowStatus.COMPLETED
+
+
+def test_processor_in_dry_run_shows_assembled_prompt(tmp_path, capsys):
+    """Verify PromptProcessor output appears in dry-run stdout."""
+    wf = WorkflowDef(
+        version="1",
+        nodes={
+            "test_node": Node(
+                role="developer",
+                prompt="test.md",
+                inputs={"requirement": "req.md"},
+                outputs={"design": "design.md"},
+            ),
+        },
+        transitions=[
+            Transition(from_="__start__", to="test_node"),
+            Transition(from_="test_node", to="__end__"),
+        ],
+        roles={},
+    )
+    
+    workflow_dir = tmp_path / "workflow"
+    workflow_dir.mkdir()
+    prompt_file = workflow_dir / "test.md"
+    prompt_file.write_text("""
+# Test Task
+
+## Input
+
+Old manual input description.
+
+## Task
+
+Do the work.
+""")
+    
+    req_file = tmp_path / "req.md"
+    req_file.write_text("Sample requirement")
+    
+    run_dir = tmp_path / "run"
+    
+    run_workflow(wf, run_dir, dry_run=True, workflow_dir=workflow_dir)
+    
+    captured = capsys.readouterr()
+    stdout = captured.out
+    assert "PROCESSED PROMPT" in stdout
+    assert "## Input" in stdout
+    assert "requirement: Read from req.md" in stdout
+    assert "## Output" in stdout
+    assert "design: Write to design.md" in stdout
+    assert "Old manual input description" not in stdout
+    assert "# Test Task" in stdout
+    assert "## Task" in stdout
