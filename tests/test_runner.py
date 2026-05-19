@@ -4,7 +4,7 @@ import click
 from pathlib import Path
 import json
 from flowctl.models import WorkflowDef, Node, Transition
-from flowctl.runner import run_workflow, _mock_execution
+from flowctl.runner import run_workflow
 from flowctl.executors.base import ExecutorResult, ExecutorInput
 from flowctl.state import save_state, load_state, has_state
 
