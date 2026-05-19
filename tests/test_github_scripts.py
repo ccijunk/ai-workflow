@@ -74,6 +74,7 @@ class TestFetchIssueScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Fetch GitHub issue",
                 prompt_path="",
                 skill_paths=[],
                 inputs={"issue_url": "issue-url.txt"},
@@ -100,6 +101,7 @@ class TestFetchIssueScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Fetch GitHub issue",
                 prompt_path="",
                 skill_paths=[],
                 inputs={"issue_url": "issue-url.txt"},
@@ -119,6 +121,7 @@ class TestFetchIssueScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Fetch GitHub issue",
                 prompt_path="",
                 skill_paths=[],
                 inputs={"issue_url": "missing.txt"},
@@ -144,6 +147,7 @@ class TestCreateBranchScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Create branch from issue",
                 prompt_path="",
                 skill_paths=[],
                 inputs={
@@ -173,6 +177,7 @@ class TestCreateBranchScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Create branch from issue",
                 prompt_path="",
                 skill_paths=[],
                 inputs={
@@ -202,6 +207,7 @@ class TestCreatePRScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Create pull request",
                 prompt_path="",
                 skill_paths=[],
                 inputs={
@@ -231,6 +237,7 @@ class TestCreatePRScript:
             
             inp = ExecutorInput(
                 role="github",
+                prompt="Create pull request",
                 prompt_path="",
                 skill_paths=[],
                 inputs={

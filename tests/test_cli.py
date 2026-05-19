@@ -36,6 +36,7 @@ def test_run_command():
         result = runner.invoke(main, ["run", "--dry-run"])
         assert result.exit_code == 0
         assert "Run complete" in result.output
+        assert "PROCESSED PROMPT" in result.output
 
 
 def test_cli_approve_reject_flags():

@@ -243,6 +243,8 @@ def run_workflow(
         if dry_run:
             echo_adapter = registry.get("echo")
             result = echo_adapter.execute(inp)
+            if result.stdout:
+                click.echo(result.stdout)
         else:
             if adapter is not None:
                 node_adapter = adapter

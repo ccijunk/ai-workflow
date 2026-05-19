@@ -76,6 +76,7 @@ def test_read_inputs_single():
         (run_dir / "input1.txt").write_text("value1")
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={"input1": "input1.txt"},
@@ -94,6 +95,7 @@ def test_read_inputs_multiple():
         (run_dir / "input2.txt").write_text("value2")
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={"input1": "input1.txt", "input2": "input2.txt"},
@@ -110,6 +112,7 @@ def test_read_inputs_missing_file():
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={"missing": "missing.txt"},
@@ -127,6 +130,7 @@ def test_read_inputs_empty_file():
         (run_dir / "empty.txt").write_text("")
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={"empty": "empty.txt"},
@@ -143,6 +147,7 @@ def test_read_inputs_no_inputs():
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={},
@@ -179,6 +184,7 @@ def test_execute_script_success(workflow_dir_with_scripts):
         (run_dir / "output.txt").write_text("test")
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={"arg1": "output.txt"},
@@ -197,6 +203,7 @@ def test_execute_script_failure(workflow_dir_with_scripts):
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={},
@@ -214,6 +221,7 @@ def test_execute_script_timeout(workflow_dir_with_scripts):
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={},
@@ -231,6 +239,7 @@ def test_execute_script_run_dir_env(workflow_dir_with_scripts):
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={},
@@ -300,6 +309,7 @@ def test_full_execution_with_workflow_dir(workflow_dir_with_scripts):
         
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="test.md",
             skill_paths=[],
             inputs={"input": "input.txt"},
