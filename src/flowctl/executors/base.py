@@ -2,6 +2,8 @@ import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass
+from typing import Optional
+from flowctl.models import Node
 
 
 @dataclass
@@ -12,7 +14,8 @@ class ExecutorInput:
     inputs: dict[str, str]
     outputs: dict[str, str]
     run_dir: Path
-    workflow_dir: Path = None
+    workflow_dir: Optional[Path] = None
+    node: Optional[Node] = None
 
 
 @dataclass

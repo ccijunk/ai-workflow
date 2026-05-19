@@ -2,12 +2,14 @@ import subprocess
 import json
 from pathlib import Path
 from .base import ExecutorAdapter, ExecutorInput, ExecutorResult
+from flowctl.prompt_processor import PromptProcessor
 
 
 class OpencodeAdapter(ExecutorAdapter):
     def __init__(self, model: str = None, agent: str = None):
         self.model = model
         self.agent = agent
+        self.processor = PromptProcessor()
 
     def execute(self, inp: ExecutorInput) -> ExecutorResult:
         prompt_content = self._load_prompt(inp)
@@ -93,24 +95,12 @@ class OpencodeAdapter(ExecutorAdapter):
             prompt_lines.append(f"Role: {inp.role}")
             prompt_lines.append(f"Prompt file: {inp.prompt_path}")
         
-        if inp.inputs:
-            prompt_lines.append("\n## Available Inputs:")
-            for key, path in inp.inputs.items():
-                input_file = inp.run_dir / path
-                if not input_file.exists() and inp.workflow_dir:
-                    input_file = inp.workflow_dir / path
-                if input_file.exists():
-                    prompt_lines.append(f"\n### {key} ({path})")
-                    prompt_lines.append(input_file.read_text())
+        base_prompt = "\n".join(prompt_lines)
         
-        if inp.outputs:
-            prompt_lines.append("\n## Expected Outputs:")
-            prompt_lines.append("Create the following output files:")
-            for key, path in inp.outputs.items():
-                abs_path = inp.run_dir.resolve() / path
-                prompt_lines.append(f"  - {abs_path} (output '{key}')")
+        if inp.node:
+            return self.processor.process(inp.node, base_prompt)
         
-        return "\n".join(prompt_lines)
+        return base_prompt
 
     def _extract_and_write_outputs(self, stdout: str, expected_outputs: dict, run_dir: Path):
         pass

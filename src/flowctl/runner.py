@@ -186,6 +186,7 @@ def run_workflow(
             outputs=node_def.outputs,
             run_dir=run_dir,
             workflow_dir=workflow_dir,
+            node=node_def,
         )
 
         logger.log_node_start(next_node, node_def.role, node_def.prompt, node_def.skills, node_def.inputs)
