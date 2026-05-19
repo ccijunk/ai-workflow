@@ -111,7 +111,47 @@ flowchart TD
 - Only first matching transition used (no branch fan-out)
 - Max 100 iterations (cycle detection)
 
-### 4. Executor System (`executors/`)
+### 4. Processor System (`processor.py`)
+
+```mermaid
+classDiagram
+    class Processor {
+        <<protocol>>
+        +process(content: str, context: dict) str
+    }
+    
+    class PromptProcessor {
+        +process(content: str, context: dict) str
+        -_remove_existing_sections(content) str
+        -_generate_input_section(inputs) str
+        -_generate_output_section(outputs) str
+    }
+    
+    Processor <|.. PromptProcessor
+```
+
+**PromptProcessor:**
+- Injects Input/Output sections from node definitions into prompts
+- Removes existing manual Input/Output sections
+- Skips bash executor nodes (prompts unchanged)
+- Called by Runner before Executor
+
+**Input section format:**
+```markdown
+## Input
+
+- requirement: Read from requirement.md
+- architecture: Read from ARCHITECTURE.md
+```
+
+**Output section format:**
+```markdown
+## Output
+
+- design_md: Write to docs/design.md
+```
+
+### 5. Executor System (`executors/`)
 
 ```mermaid
 classDiagram
@@ -122,6 +162,7 @@ classDiagram
     
     class EchoAdapter {
         +execute() ExecutorResult
+        Shows processed prompt in stdout for testability
     }
     
     class OpencodeAdapter {
@@ -139,12 +180,14 @@ classDiagram
 
 **ExecutorInput:**
 - `role`: Agent role name
-- `prompt_path`: Path to prompt file
+- `prompt`: Processed prompt content (string)
+- `prompt_path`: Original prompt file path (optional, for reference)
 - `skill_paths`: Skill files to load
 - `inputs`: Input artifact paths (read from)
 - `outputs`: Output artifact paths (write to)
 - `run_dir`: Working directory for execution
 - `workflow_dir`: Root workflow directory (for resolving prompts/skills)
+- `node`: Node definition (optional)
 
 **ExecutorResult:**
 - `outputs`: Dict of output values
@@ -247,6 +290,7 @@ src/flowctl/
 ├── cli.py                # Click CLI commands
 ├── loader.py             # YAML loader/validator
 ├── models.py             # Pydantic models
+├── processor.py          # Processor interface and PromptProcessor
 ├── runner.py             # Workflow execution engine
 ├── state.py              # Workflow state persistence
 ├── artifact_validator.py # Output validation
@@ -254,13 +298,14 @@ src/flowctl/
 ├── upgrade_cmd.py        # `upgrade` command
 ├── executors/
 │   ├── base.py           # ExecutorInput/ExecutorResult
-│   ├── echo.py           # Mock executor
-│   └ opencode.py         # Opencode CLI executor
+│   ├── echo.py           # Mock executor (shows processed prompt)
+│   └── opencode.py       # Opencode CLI executor
 
 tests/
 ├── test_cli.py
 ├── test_loader.py
 ├── test_runner.py
+├── test_processor.py     # Processor unit tests
 ├── test_executors.py
 └── test_*.py             # Unit tests
 ```
@@ -272,6 +317,7 @@ sequenceDiagram
     participant CLI
     participant Loader
     participant Runner
+    participant Processor
     participant Executor
     participant Validator
     
@@ -279,14 +325,21 @@ sequenceDiagram
     Loader-->>CLI: WorkflowDef
     CLI->>Runner: run_workflow(wf, run_dir, adapter)
     Runner->>Runner: Get transitions from __start__
-    Runner->>Executor: execute(ExecutorInput)
-    Executor->>Executor: Run opencode with prompt
+    Runner->>Runner: Load prompt file
+    Runner->>Processor: process(prompt_content, context)
+    Note over Processor: Remove existing I/O sections<br/>Generate new sections from node
+    Processor-->>Runner: processed_prompt
+    Runner->>Executor: execute(ExecutorInput with processed_prompt)
+    Executor->>Executor: Run opencode with processed prompt
     Executor-->>Runner: ExecutorResult
     Runner->>Validator: validate_artifacts(outputs, run_dir)
     Validator-->>Runner: errors (if any)
     Runner->>Runner: Update context with outputs
     Runner->>Runner: Move to next node
     Runner-->>CLI: final context
+```
+
+**Key architectural change:** Processor called by Runner before Executor, enabling testability via dry-run.
 ```
 
 ## Workflow Execution Example (spec-to-code)
@@ -336,6 +389,8 @@ stateDiagram-v2
 7. **Absolute paths**: Required for subprocess cwd to avoid path resolution failures
 8. **Human approval with feedback**: Reject requires reason, revision nodes address feedback
 9. **Reject count limits**: MAX_REJECTS=5 prevents infinite approval loops
+10. **Processor orchestration**: Runner → Processor → Executor enables testability via dry-run
+11. **EchoAdapter testability**: Dry-run shows processed prompt with injected I/O sections
 
 ## Dependencies
 
