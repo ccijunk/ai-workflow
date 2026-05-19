@@ -2,14 +2,12 @@ import subprocess
 import json
 from pathlib import Path
 from .base import ExecutorAdapter, ExecutorInput, ExecutorResult
-from flowctl.prompt_processor import PromptProcessor
 
 
 class OpencodeAdapter(ExecutorAdapter):
     def __init__(self, model: str = None, agent: str = None):
         self.model = model
         self.agent = agent
-        self.processor = PromptProcessor()
 
     def execute(self, inp: ExecutorInput) -> ExecutorResult:
         prompt_content = self._load_prompt(inp)
@@ -82,25 +80,13 @@ class OpencodeAdapter(ExecutorAdapter):
         )
 
     def _load_prompt(self, inp: ExecutorInput) -> str:
-        prompt_lines = []
+        if inp.prompt:
+            return inp.prompt
         
-        if inp.workflow_dir:
-            prompt_file = inp.workflow_dir / inp.prompt_path
-        else:
-            prompt_file = inp.run_dir / inp.prompt_path
-        
-        if prompt_file.exists():
-            prompt_lines.append(prompt_file.read_text())
-        else:
-            prompt_lines.append(f"Role: {inp.role}")
+        prompt_lines = [f"Role: {inp.role}"]
+        if inp.prompt_path:
             prompt_lines.append(f"Prompt file: {inp.prompt_path}")
-        
-        base_prompt = "\n".join(prompt_lines)
-        
-        if inp.node:
-            return self.processor.process(inp.node, base_prompt)
-        
-        return base_prompt
+        return "\n".join(prompt_lines)
 
     def _extract_and_write_outputs(self, stdout: str, expected_outputs: dict, run_dir: Path):
         pass
