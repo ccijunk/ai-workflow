@@ -189,6 +189,9 @@ def run_workflow(
 
         if prompt_file.exists():
             prompt_content = prompt_file.read_text()
+        else:
+            logger.log_warning(f"Prompt file not found: {prompt_file}")
+            prompt_content = ""
 
         # Process prompt
         process_context = {

@@ -180,3 +180,14 @@ class WorkflowLogger:
             inputs=inputs,
         )
         self._write(entry)
+    
+    def log_warning(self, message: str, node_id: str = None):
+        entry = LogEntry(
+            timestamp=self._timestamp(),
+            level="WARNING",
+            run_id=self.run_id,
+            event="warning",
+            node=node_id,
+            error=message,
+        )
+        self._write(entry)
