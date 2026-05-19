@@ -47,6 +47,11 @@ dev = [
     { name = "pytest" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0" },
@@ -55,6 +60,9 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest" }]
 
 [[package]]
 name = "iniconfig"
