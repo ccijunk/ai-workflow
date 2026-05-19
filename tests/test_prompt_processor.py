@@ -260,3 +260,124 @@ Write that.
     assert "Important notes" in result
     assert "## Input" not in result
     assert "## Output" not in result
+
+
+def test_process_with_inputs_and_outputs():
+    processor = PromptProcessor()
+    node = Node(
+        role="developer",
+        prompt="prompts/test.md",
+        inputs={"requirement": "requirement.md", "design": "docs/design.md"},
+        outputs={"implementation": "implementation.md"}
+    )
+    prompt = "# Test\n\n## Task\n\nDo something."
+    
+    result = processor.process(node, prompt)
+    
+    assert result.startswith("## Input")
+    assert "requirement: Read from requirement.md" in result
+    assert "design: Read from docs/design.md" in result
+    assert "## Output" in result
+    assert "implementation: Write to implementation.md" in result
+    assert "# Test" in result
+    assert "## Task" in result
+
+
+def test_process_removes_existing_sections():
+    processor = PromptProcessor()
+    node = Node(
+        role="architect",
+        prompt="prompts/design.md",
+        inputs={"clarify": "clarify.md"},
+        outputs={"design_md": "docs/design.md"}
+    )
+    prompt = """# Design
+
+## Input
+
+Read the clarify file manually.
+
+## Output
+
+Write design manually.
+
+## Task
+
+Create design.
+"""
+    
+    result = processor.process(node, prompt)
+    
+    assert "Read the clarify file manually" not in result
+    assert "Write design manually" not in result
+    assert "clarify: Read from clarify.md" in result
+    assert "design_md: Write to docs/design.md" in result
+
+
+def test_process_skips_bash_executor():
+    processor = PromptProcessor()
+    node = Node(
+        role="github",
+        executor="bash",
+        command="scripts/fetch-issue.sh",
+        inputs={"issue_url": "issue-url.txt"},
+        outputs={"requirement": "requirement.md"}
+    )
+    prompt = "# Fetch\n\n## Task\n\nFetch issue."
+    
+    result = processor.process(node, prompt)
+    
+    assert result == prompt
+    assert "## Input" not in result
+    assert "## Output" not in result
+
+
+def test_process_empty_inputs_outputs():
+    processor = PromptProcessor()
+    node = Node(
+        role="tester",
+        prompt="prompts/test.md",
+        inputs={},
+        outputs={}
+    )
+    prompt = "# Test\n\n## Task\n\nRun tests."
+    
+    result = processor.process(node, prompt)
+    
+    assert "## Input" not in result
+    assert "## Output" not in result
+    assert "# Test" in result
+
+
+def test_process_only_inputs():
+    processor = PromptProcessor()
+    node = Node(
+        role="reader",
+        prompt="prompts/read.md",
+        inputs={"data": "data.md"},
+        outputs={}
+    )
+    prompt = "# Read\n\n## Task\n\nRead data."
+    
+    result = processor.process(node, prompt)
+    
+    assert "## Input" in result
+    assert "data: Read from data.md" in result
+    assert "## Output" not in result
+
+
+def test_process_only_outputs():
+    processor = PromptProcessor()
+    node = Node(
+        role="writer",
+        prompt="prompts/write.md",
+        inputs={},
+        outputs={"result": "result.md"}
+    )
+    prompt = "# Write\n\n## Task\n\nWrite result."
+    
+    result = processor.process(node, prompt)
+    
+    assert "## Input" not in result
+    assert "## Output" in result
+    assert "result: Write to result.md" in result

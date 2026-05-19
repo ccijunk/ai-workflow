@@ -8,7 +8,29 @@ logger = logging.getLogger(__name__)
 
 class PromptProcessor:
     def process(self, node: Node, prompt_content: str) -> str:
-        pass
+        if not self._should_process(node):
+            return prompt_content
+        
+        try:
+            cleaned_content = self._remove_existing_sections(prompt_content)
+            
+            input_section = self._generate_input_section(node.inputs)
+            output_section = self._generate_output_section(node.outputs)
+            
+            sections = []
+            if input_section:
+                sections.append(input_section)
+            if output_section:
+                sections.append(output_section)
+            
+            if sections:
+                header = "\n\n".join(sections)
+                return f"{header}\n\n{cleaned_content}"
+            
+            return cleaned_content
+        except Exception as e:
+            logger.warning(f"Failed to process prompt for node: {e}")
+            return prompt_content
     
     def _remove_existing_sections(self, content: str) -> str:
         try:
