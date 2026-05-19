@@ -1,0 +1,136 @@
+# SDET Dry-Run Test Workflow
+# Purpose: Test prompt processing and I/O injection via dry-run
+# Run: flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test
+
+version: "1"
+
+roles:
+  tester:
+    name: Test Engineer
+    description: SDET verification role
+    executor: echo
+    model: echo
+    default_prompt: prompts/sdet-base.md
+
+nodes:
+  # Test 1: Basic Input Injection
+  test_basic_input:
+    role: tester
+    prompt: prompts/test-basic-input.md
+    inputs:
+      requirement: test-artifacts/requirement.md
+    outputs:
+      output1: test-results/basic-input-result.md
+
+  # Test 2: Basic Output Injection
+  test_basic_output:
+    role: tester
+    prompt: prompts/test-basic-output.md
+    inputs: {}
+    outputs:
+      output2: test-results/basic-output-result.md
+
+  # Test 3: Multiple Inputs
+  test_multiple_inputs:
+    role: tester
+    prompt: prompts/test-multiple-inputs.md
+    inputs:
+      input_a: test-artifacts/input-a.md
+      input_b: test-artifacts/input-b.md
+      input_c: test-artifacts/input-c.md
+    outputs:
+      output3: test-results/multi-input-result.md
+
+  # Test 4: Multiple Outputs
+  test_multiple_outputs:
+    role: tester
+    prompt: prompts/test-multiple-outputs.md
+    inputs: {}
+    outputs:
+      design_md: test-results/design.md
+      test_md: test-results/test.md
+      report_md: test-results/report.md
+
+  # Test 5: Both Input and Output
+  test_both_io:
+    role: tester
+    prompt: prompts/test-both-io.md
+    inputs:
+      requirement: test-artifacts/requirement.md
+      architecture: test-artifacts/architecture.md
+    outputs:
+      design_md: test-results/design.md
+      impl_md: test-results/impl.md
+
+  # Test 6: Section Removal
+  test_section_removal:
+    role: tester
+    prompt: prompts/test-section-removal.md
+    inputs:
+      new_input: test-artifacts/new-input.md
+    outputs:
+      new_output: test-results/new-output.md
+
+  # Test 7: Nested Paths
+  test_nested_paths:
+    role: tester
+    prompt: prompts/test-nested-paths.md
+    inputs:
+      deep_input: test-artifacts/docs/deep/input.md
+    outputs:
+      deep_output: test-results/docs/deep/output.md
+
+  # Test 8: Bash Executor Skip
+  test_bash_skip:
+    role: tester
+    executor: bash
+    prompt: prompts/sdet-base.md  # Bash executor ignores prompt, uses command
+    command: scripts/sdet-test-script.sh
+    inputs:
+      script_input: test-artifacts/script-input.md
+    outputs:
+      script_output: test-results/script-output.md
+
+  # Test 9: Empty Inputs/Outputs
+  test_empty_io:
+    role: tester
+    prompt: prompts/test-empty-io.md
+    inputs: {}
+    outputs: {}
+
+  # Test 10: Complex Integration
+  test_integration:
+    role: tester
+    prompt: prompts/test-integration.md
+    inputs:
+      requirement: test-artifacts/requirement.md
+      architecture: test-artifacts/architecture.md
+      design: test-artifacts/design.md
+    outputs:
+      impl_md: test-results/impl.md
+      test_md: test-results/test.md
+      docs_md: test-results/docs.md
+
+transitions:
+  - from: __start__
+    to: test_basic_input
+  - from: test_basic_input
+    to: test_basic_output
+  - from: test_basic_output
+    to: test_multiple_inputs
+  - from: test_multiple_inputs
+    to: test_multiple_outputs
+  - from: test_multiple_outputs
+    to: test_both_io
+  - from: test_both_io
+    to: test_section_removal
+  - from: test_section_removal
+    to: test_nested_paths
+  - from: test_nested_paths
+    to: test_bash_skip
+  - from: test_bash_skip
+    to: test_empty_io
+  - from: test_empty_io
+    to: test_integration
+  - from: test_integration
+    to: __end__

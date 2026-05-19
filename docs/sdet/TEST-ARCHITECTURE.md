@@ -640,9 +640,169 @@ pytest tests/sdet/ -v
 pytest tests/sdet/ --cov=flowctl.processor --cov=flowctl.runner
 ```
 
+## SDET Test Workflow
+
+### Dedicated Test Workflow
+
+Location: `.flows/workflows/sdet-dry-run-test.yaml`
+
+**Purpose:** End-to-end test workflow specifically designed for SDET dry-run verification.
+
+**Test Cases:**
+
+| Node | Test Case | Expected Behavior |
+|------|-----------|-------------------|
+| `test_basic_input` | Single input injection | `## Input` with one key |
+| `test_basic_output` | Single output injection | `## Output` with one key |
+| `test_multiple_inputs` | Multiple inputs (3) | All inputs in order |
+| `test_multiple_outputs` | Multiple outputs (3) | All outputs in order |
+| `test_both_io` | Both Input/Output | Both sections present |
+| `test_section_removal` | Remove old sections | Old content NOT in output |
+| `test_nested_paths` | Nested file paths | Paths preserved (docs/deep/) |
+| `test_bash_skip` | Bash executor skip | Uses script, not prompt |
+| `test_empty_io` | Empty inputs/outputs | No sections added |
+| `test_integration` | Full integration | All features combined |
+
+**Test Prompts:**
+
+Location: `.flows/prompts/test-*.md`
+
+Each prompt includes:
+- Purpose description
+- Expected output specification
+- Verification checklist
+- Original content to preserve
+
+### SDET Test Script
+
+Location: `scripts/sdet-dry-run-test.sh`
+
+**Usage:**
+
+```bash
+# Run SDET dry-run test suite
+./scripts/sdet-dry-run-test.sh
+
+# Output saved to: .flows/runs/sdet-test-results/dry-run-output.txt
+```
+
+**Script Steps:**
+
+1. **Create test artifacts** - Generate input files for workflow
+2. **Run dry-run** - Execute `flowctl run --dry-run` with SDET workflow
+3. **Verify results** - Check 10 test cases against expected output
+
+**Verification Output:**
+
+```
+========================================
+SDET Dry-Run Test Suite
+========================================
+
+Test 1: Basic Input Injection
+  ✓ PASS: Input section injected
+
+Test 2: Basic Output Injection
+  ✓ PASS: Output section injected
+
+...
+
+========================================
+Test Summary
+========================================
+Passed: 10
+Failed: 0
+
+✓ All SDET dry-run tests passed!
+```
+
+### Manual Test Commands
+
+```bash
+# Run SDET workflow in dry-run mode
+flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test
+
+# View specific node output
+flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep "test_basic_input"
+
+# Check section removal
+flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep -v "THIS IS OLD MANUAL"
+
+# Verify nested paths preserved
+flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep "docs/deep"
+```
+
+## SDET Test Directory Structure
+
+```
+.flowctl/
+├── workflows/
+│   └── sdet-dry-run-test.yaml       # SDET test workflow (10 nodes)
+├── prompts/
+│   ├── sdet-base.md                 # Base role prompt
+│   ├── test-basic-input.md          # Test 1 prompt
+│   ├── test-basic-output.md         # Test 2 prompt
+│   ├── test-multiple-inputs.md      # Test 3 prompt
+│   ├── test-multiple-outputs.md     # Test 4 prompt
+│   ├── test-both-io.md              # Test 5 prompt
+│   ├── test-section-removal.md      # Test 6 prompt (has old sections)
+│   ├── test-nested-paths.md         # Test 7 prompt
+│   ├── test-empty-io.md             # Test 9 prompt
+│   └── test-integration.md          # Test 10 prompt
+├── test-artifacts/                   # Test input files
+│   ├── requirement.md
+│   ├── architecture.md
+│   ├── input-a.md
+│   ├── input-b.md
+│   ├── input-c.md
+│   ├── docs/
+│   │   └ deep/
+│   │     └── input.md               # Nested input
+│   └── script-input.md              # For bash executor
+├── runs/
+│   └ sdet-test-results/
+│     └ dry-run-output.txt           # Captured test output
+│     └ test-results/                # Mock output artifacts
+│       ├── basic-input-result.md
+│       ├── design.md
+│       ├── impl.md
+│       └ ...
+
+scripts/
+├── sdet-dry-run-test.sh              # SDET test runner script
+└── sdet-test-script.sh               # Bash executor test script
+
+tests/
+├── sdet/
+│   ├── test_processor_unit.py        # Processor unit tests (21 tests)
+│   ├── test_integration_dry_run.py   # Integration tests
+│   ├── test_e2e_cli.py               # CLI E2E tests
+│   └ edge_cases.py                   # Edge case tests
+│   └ performance.py                  # Performance benchmarks
+└ ...
+```
+
+## Quick Start for SDETs
+
+```bash
+# 1. Run automated SDET test suite
+./scripts/sdet-dry-run-test.sh
+
+# 2. Run pytest tests
+pytest tests/sdet/ -v
+
+# 3. Manual dry-run verification
+flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test
+
+# 4. Check specific feature
+flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep "## Input"
+```
+
 ## References
 
 - **Architecture:** `ARCHITECTURE.md` - Section 4 (Processor System)
 - **Design Spec:** `docs/superpowers/specs/2026-05-19-node-io-injection-design.md`
 - **Implementation:** `src/flowctl/processor.py`, `src/flowctl/runner.py`
 - **Example Tests:** `tests/test_processor.py`, `tests/test_runner.py::test_processor_in_dry_run_shows_assembled_prompt`
+- **SDET Workflow:** `.flows/workflows/sdet-dry-run-test.yaml`
+- **SDET Script:** `scripts/sdet-dry-run-test.sh`
