@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 from flowctl.executors import EchoAdapter, OpencodeAdapter
 from flowctl.executors.base import ExecutorInput
 from flowctl.models import Node
@@ -12,6 +12,7 @@ def test_echo_adapter_returns_outputs():
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="test",
+            prompt="Test prompt content",
             prompt_path="prompts/test.md",
             skill_paths=[],
             inputs={},
@@ -21,7 +22,7 @@ def test_echo_adapter_returns_outputs():
         result = adapter.execute(inp)
         assert result.returncode == 0
         assert "Role: test" in result.stdout
-        assert "Prompt: prompts/test.md" in result.stdout
+        assert "Prompt Path: prompts/test.md" in result.stdout
         assert (run_dir / "spec.md").exists()
 
 
@@ -31,6 +32,7 @@ def test_opencode_adapter_builds_prompt():
         run_dir = Path(tmp)
         inp = ExecutorInput(
             role="developer",
+            prompt="Write code to implement the feature",
             prompt_path="prompts/code.md",
             skill_paths=["skills/tdd.md"],
             inputs={"spec": "spec.md"},
@@ -38,8 +40,7 @@ def test_opencode_adapter_builds_prompt():
             run_dir=run_dir,
         )
         prompt = adapter._load_prompt(inp)
-        assert "developer" in prompt
-        assert "code" in prompt
+        assert "Write code to implement the feature" in prompt
 
 
 def test_opencode_adapter_with_model():
@@ -48,7 +49,7 @@ def test_opencode_adapter_with_model():
     assert adapter.agent == "coder"
 
 
-def test_opencode_adapter_with_prompt_processor():
+def test_opencode_adapter_uses_processed_prompt():
     adapter = OpencodeAdapter()
     
     node = Node(
@@ -59,8 +60,11 @@ def test_opencode_adapter_with_prompt_processor():
         executor="opencode"
     )
     
+    processed_prompt = "# Processed Prompt\n\n## Input\n\nrequirement: Read from requirement.md\n\n## Output\n\nimplementation: Write to implementation.md"
+    
     inp = ExecutorInput(
         role="developer",
+        prompt=processed_prompt,
         prompt_path="prompts/implement.md",
         skill_paths=[],
         inputs={"requirement": "requirement.md"},
@@ -70,13 +74,10 @@ def test_opencode_adapter_with_prompt_processor():
         node=node
     )
     
-    prompt_content = "# Test\n\n## Task\n\nDo something."
+    result = adapter._load_prompt(inp)
     
-    with patch.object(Path, 'exists', return_value=False):
-        with patch("builtins.open", mock_open(read_data=prompt_content)):
-            processed = adapter._load_prompt(inp)
-    
-    assert "## Input" in processed
-    assert "requirement: Read from requirement.md" in processed
-    assert "## Output" in processed
-    assert "implementation: Write to implementation.md" in processed
+    assert result == processed_prompt
+    assert "## Input" in result
+    assert "requirement: Read from requirement.md" in result
+    assert "## Output" in result
+    assert "implementation: Write to implementation.md" in result

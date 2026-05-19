@@ -3,6 +3,7 @@ import yaml
 import click
 from .models import WorkflowDef, Node, FlowctlConfig
 from .executors import ExecutorAdapter, EchoAdapter, ExecutorRegistry, create_default_registry
+from .processor import PromptProcessor
 from .executors.base import ExecutorInput, ExecutorResult
 from .artifact_validator import validate_artifacts
 from .logger import WorkflowLogger
@@ -85,6 +86,7 @@ def run_workflow(
     reject_reason: str | None = None,
 ) -> dict[str, str]:
     config = load_flowctl_config(workflow_dir)
+    processor = PromptProcessor()
     
     if adapter is None:
         registry = registry or create_default_registry()
@@ -178,8 +180,30 @@ def run_workflow(
             logger.log_error(RuntimeError(f"Node '{next_node}' not found"))
             raise RuntimeError(f"Node '{next_node}' not found in workflow definition")
 
+        # Load prompt file
+        prompt_content = ""
+        if workflow_dir:
+            prompt_file = workflow_dir / node_def.prompt
+        else:
+            prompt_file = run_dir / node_def.prompt
+
+        if prompt_file.exists():
+            prompt_content = prompt_file.read_text()
+        else:
+            logger.log_warning(f"Prompt file not found: {prompt_file}")
+            prompt_content = ""
+
+        # Process prompt
+        process_context = {
+            "node": node_def,
+            "run_dir": run_dir,
+            "workflow_dir": workflow_dir,
+        }
+        processed_prompt = processor.process(prompt_content, process_context)
+
         inp = ExecutorInput(
             role=node_def.role,
+            prompt=processed_prompt,
             prompt_path=node_def.prompt,
             skill_paths=node_def.skills,
             inputs=node_def.inputs,
@@ -217,7 +241,10 @@ def run_workflow(
             return context
 
         if dry_run:
-            result = _mock_execution(inp, node_def)
+            echo_adapter = registry.get("echo")
+            result = echo_adapter.execute(inp)
+            if result.stdout:
+                click.echo(result.stdout)
         else:
             if adapter is not None:
                 node_adapter = adapter
@@ -252,23 +279,3 @@ def run_workflow(
 
     logger.log_workflow_end("completed")
     return context
-
-
-def _mock_execution(inp: ExecutorInput, node_def) -> ExecutorResult:
-    outputs = {}
-    mock_values = {
-        "pass": "yes",
-        "verdict": "PASS",
-        "ok": "pass",
-        "clarify_approved": "yes",
-        "design_approved": "yes",
-        "requirement": "mock requirement: add role binding config, add role prompt",
-        "pr_url": "https://github.com/ccijunk/ai-workflow/pull/1",
-    }
-    for key, path_str in node_def.outputs.items():
-        artifact_path = inp.run_dir / path_str
-        artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        mock_val = mock_values.get(key, f"mock: {key}")
-        artifact_path.write_text(mock_val)
-        outputs[key] = mock_val
-    return ExecutorResult(outputs=outputs, returncode=0, stdout="[dry-run]", stderr="")
