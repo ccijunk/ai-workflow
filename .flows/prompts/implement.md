@@ -2,14 +2,6 @@
 
 You are the developer role. Implement the code changes based on the design and test plan.
 
-## Input
-
-Read ALL input files provided:
-- `explore.md` - codebase exploration results
-- `docs/test-design.md` - test strategy
-- `docs/design.md` - technical design
-- `repo-root.txt` - repository root path
-
 ## Task
 
 1. Create implementation plan in `implementation.md`
