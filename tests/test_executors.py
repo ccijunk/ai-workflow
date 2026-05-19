@@ -1,7 +1,9 @@
 import tempfile
 from pathlib import Path
+from unittest.mock import patch, mock_open
 from flowctl.executors import EchoAdapter, OpencodeAdapter
 from flowctl.executors.base import ExecutorInput
+from flowctl.models import Node
 
 
 def test_echo_adapter_returns_outputs():
@@ -44,3 +46,37 @@ def test_opencode_adapter_with_model():
     adapter = OpencodeAdapter(model="alibaba-cn/glm-5", agent="coder")
     assert adapter.model == "alibaba-cn/glm-5"
     assert adapter.agent == "coder"
+
+
+def test_opencode_adapter_with_prompt_processor():
+    adapter = OpencodeAdapter()
+    
+    node = Node(
+        role="developer",
+        prompt="prompts/test.md",
+        inputs={"requirement": "requirement.md"},
+        outputs={"implementation": "implementation.md"},
+        executor="opencode"
+    )
+    
+    inp = ExecutorInput(
+        role="developer",
+        prompt_path="prompts/implement.md",
+        skill_paths=[],
+        inputs={"requirement": "requirement.md"},
+        outputs={"implementation": "implementation.md"},
+        run_dir=Path("/tmp/test"),
+        workflow_dir=None,
+        node=node
+    )
+    
+    prompt_content = "# Test\n\n## Task\n\nDo something."
+    
+    with patch.object(Path, 'exists', return_value=False):
+        with patch("builtins.open", mock_open(read_data=prompt_content)):
+            processed = adapter._load_prompt(inp)
+    
+    assert "## Input" in processed
+    assert "requirement: Read from requirement.md" in processed
+    assert "## Output" in processed
+    assert "implementation: Write to implementation.md" in processed
