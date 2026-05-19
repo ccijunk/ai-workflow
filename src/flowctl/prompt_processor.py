@@ -11,7 +11,19 @@ class PromptProcessor:
         pass
     
     def _remove_existing_sections(self, content: str) -> str:
-        pass
+        try:
+            input_pattern = r'^## [Ii]nput.*?(?=^## |\Z)'
+            output_pattern = r'^## [Oo]utput.*?(?=^## |\Z)'
+            
+            new_content = re.sub(input_pattern, '', content, flags=re.MULTILINE | re.DOTALL)
+            new_content = re.sub(output_pattern, '', new_content, flags=re.MULTILINE | re.DOTALL)
+            
+            if new_content != content:
+                return new_content.strip()
+            return content
+        except Exception as e:
+            logger.warning(f"Failed to remove existing sections: {e}")
+            return content
     
     def _generate_input_section(self, inputs: dict[str, str]) -> str:
         if not inputs:
