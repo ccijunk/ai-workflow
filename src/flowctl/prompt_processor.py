@@ -20,4 +20,4 @@ class PromptProcessor:
         pass
     
     def _should_process(self, node: Node) -> bool:
-        pass
+        return node.executor != "bash"
