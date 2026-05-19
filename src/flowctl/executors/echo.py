@@ -4,7 +4,16 @@ from .base import ExecutorAdapter, ExecutorInput, ExecutorResult
 
 class EchoAdapter(ExecutorAdapter):
     def execute(self, inp: ExecutorInput) -> ExecutorResult:
-        stdout_lines = [f"Role: {inp.role}", f"Prompt: {inp.prompt_path}"]
+        stdout_lines = [
+            f"Role: {inp.role}",
+            f"Prompt Path: {inp.prompt_path}",
+            "",
+            "=" * 60,
+            "PROCESSED PROMPT",
+            "=" * 60,
+            inp.prompt,
+            "=" * 60,
+        ]
         outputs = {}
         for key, path_str in inp.inputs.items():
             p = Path(path_str)
