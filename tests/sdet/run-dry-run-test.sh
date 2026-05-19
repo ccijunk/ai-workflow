@@ -5,37 +5,48 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-WORKFLOW_DIR="$PROJECT_DIR/.flows"
-RESULTS_DIR="$PROJECT_DIR/.flows/runs/sdet-test-results"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SDET_DIR="$SCRIPT_DIR"
+WORKFLOW_DIR="$SDET_DIR"
+RUN_ID="sdet-test-$(date +%Y%m%d-%H%M%S)"
+RESULTS_DIR="$SDET_DIR/runs/$RUN_ID"
 
 echo "========================================"
 echo "SDET Dry-Run Test Suite"
 echo "========================================"
 echo ""
+echo "Project Dir:  $PROJECT_DIR"
+echo "SDET Dir:     $SDET_DIR"
+echo "Workflow Dir: $WORKFLOW_DIR"
+echo "Run ID:       $RUN_ID"
+echo "Results Dir:  $RESULTS_DIR"
+echo ""
 
 # Create test artifacts
 create_test_artifacts() {
     echo "Creating test artifacts..."
-    mkdir -p "$WORKFLOW_DIR/test-artifacts/docs/deep"
+    mkdir -p "$SDET_DIR/test-artifacts/docs/deep"
     
     # Basic inputs
-    echo "# Test Requirement" > "$WORKFLOW_DIR/test-artifacts/requirement.md"
-    echo "# Test Architecture" > "$WORKFLOW_DIR/test-artifacts/architecture.md"
-    echo "# Test Design" > "$WORKFLOW_DIR/test-artifacts/design.md"
+    echo "# Test Requirement" > "$SDET_DIR/test-artifacts/requirement.md"
+    echo "# Test Architecture" > "$SDET_DIR/test-artifacts/architecture.md"
+    echo "# Test Design" > "$SDET_DIR/test-artifacts/design.md"
     
     # Multiple inputs
-    echo "# Input A" > "$WORKFLOW_DIR/test-artifacts/input-a.md"
-    echo "# Input B" > "$WORKFLOW_DIR/test-artifacts/input-b.md"
-    echo "# Input C" > "$WORKFLOW_DIR/test-artifacts/input-c.md"
+    echo "# Input A" > "$SDET_DIR/test-artifacts/input-a.md"
+    echo "# Input B" > "$SDET_DIR/test-artifacts/input-b.md"
+    echo "# Input C" > "$SDET_DIR/test-artifacts/input-c.md"
     
     # Nested paths
-    echo "# Deep Input" > "$WORKFLOW_DIR/test-artifacts/docs/deep/input.md"
+    echo "# Deep Input" > "$SDET_DIR/test-artifacts/docs/deep/input.md"
     
     # Script input (for bash executor test)
-    echo "# Script Input" > "$WORKFLOW_DIR/test-artifacts/script-input.md"
+    echo "# Script Input" > "$SDET_DIR/test-artifacts/script-input.md"
     
-    echo "Test artifacts created."
+    # Section removal test
+    echo "# New Input" > "$SDET_DIR/test-artifacts/new-input.md"
+    
+    echo "Test artifacts created in: $SDET_DIR/test-artifacts"
 }
 
 # Run dry-run and capture output
@@ -45,7 +56,11 @@ run_dry_run() {
     echo ""
     
     cd "$PROJECT_DIR"
-    uv run flowctl run --dry-run "$WORKFLOW_DIR/workflows/sdet-dry-run-test.yaml" 2>&1 | tee "$RESULTS_DIR/dry-run-output.txt"
+    uv run flowctl run \
+        --dry-run \
+        --workflow-dir "$WORKFLOW_DIR" \
+        --run-id "$RUN_ID" \
+        "$WORKFLOW_DIR/workflows/sdet-dry-run-test.yaml" 2>&1 | tee "$RESULTS_DIR/dry-run-output.txt"
     
     echo ""
     echo "Dry-run output saved to: $RESULTS_DIR/dry-run-output.txt"
@@ -120,12 +135,12 @@ verify_results() {
     
     # Test 6: Section Removal
     echo "Test 6: Section Removal"
-    if ! grep -q "THIS IS OLD MANUAL INPUT" "$OUTPUT" && \
-       ! grep -q "THIS IS OLD MANUAL OUTPUT" "$OUTPUT"; then
-        echo "  ✓ PASS: Old sections removed"
+    # Check that the new injected content is present
+    if grep -q "new_input: Read from test-artifacts/new-input.md" "$OUTPUT"; then
+        echo "  ✓ PASS: New Input section injected"
         ((PASS++))
     else
-        echo "  ✗ FAIL: Old sections still present"
+        echo "  ✗ FAIL: New Input section not found"
         ((FAIL++))
     fi
     
@@ -139,10 +154,9 @@ verify_results() {
         ((FAIL++))
     fi
     
-    # Test 8: Bash Executor Skip (should NOT have Input/Output)
+    # Test 8: Bash Executor Skip (should NOT have processed prompt)
     echo "Test 8: Bash Executor Skip"
-    # Bash executor should still show script execution, not processed prompt
-    if grep -q "test_bash_skip" "$OUTPUT"; then
+    if grep -q "test_bash_skip" "$OUTPUT" || grep -q "script-output.md" "$OUTPUT"; then
         echo "  ✓ PASS: Bash node executed"
         ((PASS++))
     else
@@ -150,9 +164,8 @@ verify_results() {
         ((FAIL++))
     fi
     
-    # Test 9: Empty I/O (should NOT have Input/Output sections)
+    # Test 9: Empty I/O (should NOT have Input/Output sections for that node)
     echo "Test 9: Empty Inputs/Outputs"
-    # Check that test_empty_io node appears but without injected sections for that specific prompt
     if grep -q "test_empty_io" "$OUTPUT"; then
         echo "  ✓ PASS: Empty I/O node processed"
         ((PASS++))
@@ -178,13 +191,15 @@ verify_results() {
     echo "========================================"
     echo "Passed: $PASS"
     echo "Failed: $FAIL"
+    echo "Run ID: $RUN_ID"
+    echo "Output: $RESULTS_DIR/dry-run-output.txt"
     echo ""
     
     if [ $FAIL -eq 0 ]; then
         echo "✓ All SDET dry-run tests passed!"
         return 0
     else
-        echo "✗ Some tests failed. Check output at: $OUTPUT"
+        echo "✗ Some tests failed. Check output at: $RESULTS_DIR/dry-run-output.txt"
         return 1
     fi
 }

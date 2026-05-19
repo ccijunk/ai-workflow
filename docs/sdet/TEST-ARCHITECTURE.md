@@ -644,9 +644,22 @@ pytest tests/sdet/ --cov=flowctl.processor --cov=flowctl.runner
 
 ### Dedicated Test Workflow
 
-Location: `.flows/workflows/sdet-dry-run-test.yaml`
+Location: `tests/sdet/workflows/sdet-dry-run-test.yaml`
 
 **Purpose:** End-to-end test workflow specifically designed for SDET dry-run verification.
+
+**Run Command:**
+
+```bash
+# Using run_id and workflow_dir
+flowctl run --dry-run \
+  --workflow-dir tests/sdet \
+  --run-id sdet-test-001 \
+  tests/sdet/workflows/sdet-dry-run-test.yaml
+
+# Or use the SDET test script
+./tests/sdet/run-dry-run-test.sh
+```
 
 **Test Cases:**
 
@@ -665,7 +678,7 @@ Location: `.flows/workflows/sdet-dry-run-test.yaml`
 
 **Test Prompts:**
 
-Location: `.flows/prompts/test-*.md`
+Location: `tests/sdet/prompts/test-*.md`
 
 Each prompt includes:
 - Purpose description
@@ -673,23 +686,35 @@ Each prompt includes:
 - Verification checklist
 - Original content to preserve
 
+**Test Artifacts:**
+
+Location: `tests/sdet/test-artifacts/`
+
+Input files created by test script for workflow nodes.
+
 ### SDET Test Script
 
-Location: `scripts/sdet-dry-run-test.sh`
+Location: `tests/sdet/run-dry-run-test.sh`
 
 **Usage:**
 
 ```bash
 # Run SDET dry-run test suite
-./scripts/sdet-dry-run-test.sh
+./tests/sdet/run-dry-run-test.sh
 
-# Output saved to: .flows/runs/sdet-test-results/dry-run-output.txt
+# Output saved to: tests/sdet/runs/<run-id>/dry-run-output.txt
 ```
+
+**Script Parameters:**
+
+- `--workflow-dir tests/sdet` - Points to SDET test workflow directory
+- `--run-id sdet-test-YYYYMMDD-HHMMSS` - Unique run ID for results
+- `--dry-run` - Mock execution mode
 
 **Script Steps:**
 
-1. **Create test artifacts** - Generate input files for workflow
-2. **Run dry-run** - Execute `flowctl run --dry-run` with SDET workflow
+1. **Create test artifacts** - Generate input files in `tests/sdet/test-artifacts/`
+2. **Run dry-run** - Execute `flowctl run` with SDET workflow
 3. **Verify results** - Check 10 test cases against expected output
 
 **Verification Output:**
@@ -698,6 +723,12 @@ Location: `scripts/sdet-dry-run-test.sh`
 ========================================
 SDET Dry-Run Test Suite
 ========================================
+
+Project Dir:  /path/to/project
+SDET Dir:     /path/to/project/tests/sdet
+Workflow Dir: /path/to/project/tests/sdet
+Run ID:       sdet-test-20260519-140000
+Results Dir:  /path/to/project/tests/sdet/runs/sdet-test-20260519-140000
 
 Test 1: Basic Input Injection
   ✓ PASS: Input section injected
@@ -712,6 +743,8 @@ Test Summary
 ========================================
 Passed: 10
 Failed: 0
+Run ID: sdet-test-20260519-140000
+Output: tests/sdet/runs/sdet-test-20260519-140000/dry-run-output.txt
 
 ✓ All SDET dry-run tests passed!
 ```
@@ -735,7 +768,7 @@ flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep 
 ## SDET Test Directory Structure
 
 ```
-.flowctl/
+tests/sdet/
 ├── workflows/
 │   └── sdet-dry-run-test.yaml       # SDET test workflow (10 nodes)
 ├── prompts/
@@ -749,53 +782,56 @@ flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep 
 │   ├── test-nested-paths.md         # Test 7 prompt
 │   ├── test-empty-io.md             # Test 9 prompt
 │   └── test-integration.md          # Test 10 prompt
-├── test-artifacts/                   # Test input files
+├── test-artifacts/                   # Test input files (created by script)
 │   ├── requirement.md
 │   ├── architecture.md
+│   ├── design.md
 │   ├── input-a.md
 │   ├── input-b.md
 │   ├── input-c.md
-│   ├── docs/
-│   │   └ deep/
-│   │     └── input.md               # Nested input
-│   └── script-input.md              # For bash executor
+│   ├── new-input.md
+│   ├── script-input.md
+│   └── docs/
+│       └ deep/
+│         └── input.md               # Nested input
 ├── runs/
-│   └ sdet-test-results/
+│   └ sdet-test-YYYYMMDD-HHMMSS/     # Run results (by run_id)
 │     └ dry-run-output.txt           # Captured test output
 │     └ test-results/                # Mock output artifacts
 │       ├── basic-input-result.md
 │       ├── design.md
 │       ├── impl.md
 │       └ ...
+├── run-dry-run-test.sh              # SDET test runner script
+└── test_processor_unit.py           # Processor unit tests (21 tests)
 
 scripts/
-├── sdet-dry-run-test.sh              # SDET test runner script
-└── sdet-test-script.sh               # Bash executor test script
-
-tests/
-├── sdet/
-│   ├── test_processor_unit.py        # Processor unit tests (21 tests)
-│   ├── test_integration_dry_run.py   # Integration tests
-│   ├── test_e2e_cli.py               # CLI E2E tests
-│   └ edge_cases.py                   # Edge case tests
-│   └ performance.py                  # Performance benchmarks
-└ ...
+└── sdet-test-script.sh              # Bash executor test script (optional)
 ```
 
 ## Quick Start for SDETs
 
 ```bash
 # 1. Run automated SDET test suite
-./scripts/sdet-dry-run-test.sh
+./tests/sdet/run-dry-run-test.sh
 
 # 2. Run pytest tests
-pytest tests/sdet/ -v
+pytest tests/sdet/test_processor_unit.py -v
 
-# 3. Manual dry-run verification
-flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test
+# 3. Manual dry-run verification with run_id
+flowctl run --dry-run \
+  --workflow-dir tests/sdet \
+  --run-id sdet-test-001 \
+  tests/sdet/workflows/sdet-dry-run-test.yaml
 
 # 4. Check specific feature
-flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep "## Input"
+flowctl run --dry-run \
+  --workflow-dir tests/sdet \
+  --run-id sdet-test-002 \
+  tests/sdet/workflows/sdet-dry-run-test.yaml | grep "## Input"
+
+# 5. View results
+cat tests/sdet/runs/sdet-test-*/dry-run-output.txt
 ```
 
 ## References
@@ -804,5 +840,5 @@ flowctl run --dry-run --workflow-dir .flows --workflow sdet-dry-run-test | grep 
 - **Design Spec:** `docs/superpowers/specs/2026-05-19-node-io-injection-design.md`
 - **Implementation:** `src/flowctl/processor.py`, `src/flowctl/runner.py`
 - **Example Tests:** `tests/test_processor.py`, `tests/test_runner.py::test_processor_in_dry_run_shows_assembled_prompt`
-- **SDET Workflow:** `.flows/workflows/sdet-dry-run-test.yaml`
-- **SDET Script:** `scripts/sdet-dry-run-test.sh`
+- **SDET Workflow:** `tests/sdet/workflows/sdet-dry-run-test.yaml`
+- **SDET Script:** `tests/sdet/run-dry-run-test.sh`
