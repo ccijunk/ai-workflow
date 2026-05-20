@@ -22,7 +22,7 @@ nodes:
     inputs:
       issue: issue.md
       requirement: requirement.md
-      memory_ba: memory/ba.md
+      memory_ba: workflow:memory/ba.md
       domain_review: domain-review.md
       reject_reason: reject-reason.txt
     outputs: {clarify_md: clarify.md}
@@ -40,7 +40,8 @@ nodes:
     executor: opencode
     inputs:
       clarify: clarify.md
-      memory_architect: memory/architect.md
+      memory_architect: workflow:memory/architect.md
+      repo_architecture: repo:ARCHITECTURE.md
       testability_review: testability-review.md
       reject_reason: reject-reason.txt
     outputs: {design_md: design.md}
@@ -59,7 +60,8 @@ nodes:
     inputs:
       design: design.md
       clarify: clarify.md
-      memory_test_arch: memory/test-arch.md
+      memory_test_arch: workflow:memory/test-arch.md
+      repo_test_architecture: repo:docs/sdet/TEST-ARCHITECTURE.md
     outputs: {test_design_md: test-design.md}
 
   developer:
@@ -70,7 +72,7 @@ nodes:
       design: design.md
       test_design: test-design.md
       repo_root: repo-root.txt
-      memory_developer: memory/developer.md
+      memory_developer: workflow:memory/developer.md
       code_review: code-review.md
       reject_reason: reject-reason.txt
     outputs: {implementation_md: implementation.md}
@@ -89,7 +91,7 @@ nodes:
     inputs:
       test_design: test-design.md
       design: design.md
-      memory_test_developer: memory/test-developer.md
+      memory_test_developer: workflow:memory/test-developer.md
       test_review: test-review.md
       reject_reason: reject-reason.txt
     outputs: {test_results_md: test-results.md}
@@ -112,7 +114,7 @@ nodes:
       test_review: test-review.md
       clarify: clarify.md
       design: design.md
-      memory_reviewer: memory/reviewer.md
+      memory_reviewer: workflow:memory/reviewer.md
     outputs: {final_review_md: final-review.md}
 
   reflect:
@@ -127,19 +129,19 @@ nodes:
       code_review: code-review.md
       test_review: test-review.md
       final_review: final-review.md
-      memory_ba: memory/ba.md
-      memory_architect: memory/architect.md
-      memory_test_arch: memory/test-arch.md
-      memory_developer: memory/developer.md
-      memory_test_developer: memory/test-developer.md
+      memory_ba: workflow:memory/ba.md
+      memory_architect: workflow:memory/architect.md
+      memory_test_arch: workflow:memory/test-arch.md
+      memory_developer: workflow:memory/developer.md
+      memory_test_developer: workflow:memory/test-developer.md
     outputs:
       reflect_md: reflect.md
-      memory_ba_updated: memory/ba.md
-      memory_architect_updated: memory/architect.md
-      memory_test_arch_updated: memory/test-arch.md
-      memory_developer_updated: memory/developer.md
-      memory_test_developer_updated: memory/test-developer.md
-      memory_reviewer_updated: memory/reviewer.md
+      memory_ba_updated: workflow:memory/ba.md
+      memory_architect_updated: workflow:memory/architect.md
+      memory_test_arch_updated: workflow:memory/test-arch.md
+      memory_developer_updated: workflow:memory/developer.md
+      memory_test_developer_updated: workflow:memory/test-developer.md
+      memory_reviewer_updated: workflow:memory/reviewer.md
 
   create_pr:
     role: github

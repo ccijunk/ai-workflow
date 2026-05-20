@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from flowctl.processor import PromptProcessor
 from flowctl.models import Node
 
@@ -207,3 +208,103 @@ def test_error_handling_returns_original():
     result = processor.process(prompt, context)
     
     assert result == prompt
+
+
+def test_parse_prefix_run():
+    processor = PromptProcessor()
+    prefix, path = processor._parse_prefix("run:clarify.md")
+    assert prefix == "run"
+    assert path == "clarify.md"
+
+
+def test_parse_prefix_workflow():
+    processor = PromptProcessor()
+    prefix, path = processor._parse_prefix("workflow:memory/architect.md")
+    assert prefix == "workflow"
+    assert path == "memory/architect.md"
+
+
+def test_parse_prefix_repo():
+    processor = PromptProcessor()
+    prefix, path = processor._parse_prefix("repo:ARCHITECTURE.md")
+    assert prefix == "repo"
+    assert path == "ARCHITECTURE.md"
+
+
+def test_parse_prefix_default():
+    processor = PromptProcessor()
+    prefix, path = processor._parse_prefix("clarify.md")
+    assert prefix == "run"
+    assert path == "clarify.md"
+
+
+def test_resolve_path_workflow():
+    processor = PromptProcessor()
+    context = {
+        "workflow_dir": Path("/home/user/.flows"),
+        "run_dir": Path("/home/user/.flows/runs/test"),
+    }
+    abs_path = processor._resolve_path("workflow", "memory/ba.md", context)
+    assert abs_path == Path("/home/user/.flows/memory/ba.md")
+
+
+def test_resolve_path_repo():
+    processor = PromptProcessor()
+    context = {
+        "repo_dir": Path("/home/user/code/my-project"),
+        "run_dir": Path("/home/user/.flows/runs/test"),
+    }
+    abs_path = processor._resolve_path("repo", "ARCHITECTURE.md", context)
+    assert abs_path == Path("/home/user/code/my-project/ARCHITECTURE.md")
+
+
+def test_resolve_path_run():
+    processor = PromptProcessor()
+    context = {
+        "run_dir": Path("/home/user/.flows/runs/test"),
+    }
+    abs_path = processor._resolve_path("run", "clarify.md", context)
+    assert abs_path == Path("/home/user/.flows/runs/test/clarify.md")
+
+
+def test_resolve_path_missing_dir():
+    processor = PromptProcessor()
+    context = {
+        "run_dir": Path("/home/user/.flows/runs/test"),
+    }
+    abs_path = processor._resolve_path("workflow", "memory/ba.md", context)
+    assert abs_path == Path("memory/ba.md")
+
+
+def test_generate_input_with_prefix():
+    processor = PromptProcessor()
+    node = Node(
+        role="dev",
+        prompt="test.md",
+        inputs={"arch": "workflow:memory/architect.md"},
+        outputs={},
+    )
+    context = {
+        "node": node,
+        "workflow_dir": Path("/flows"),
+        "run_dir": Path("/runs/test"),
+    }
+    result = processor.process("# Task", context)
+    assert "Read from memory/architect.md (workflow_dir: /flows/memory/architect.md)" in result
+
+
+def test_generate_output_with_prefix():
+    processor = PromptProcessor()
+    node = Node(
+        role="dev",
+        prompt="test.md",
+        inputs={},
+        outputs={"memory_update": "workflow:memory/ba.md"},
+    )
+    context = {
+        "node": node,
+        "workflow_dir": Path("/flows"),
+        "run_dir": Path("/runs/test"),
+    }
+    result = processor.process("# Task", context)
+    assert "Write to memory/ba.md (workflow_dir: /flows/memory/ba.md)" in result

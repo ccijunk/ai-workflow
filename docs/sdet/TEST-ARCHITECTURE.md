@@ -367,6 +367,263 @@ Real task content.
         assert "design: Write to design.md" in result.stdout
 ```
 
+### Level 2.5: Path Prefix Tests
+
+**Location:** `tests/test_processor.py`, `tests/integration/test_path_prefix.py`, `tests/test_artifact_validator.py`
+
+**What to test:**
+- Prefix parsing (`run:`, `workflow:`, `repo:`, no prefix)
+- Path resolution with different directories (workflow_dir, repo_dir, run_dir)
+- Input section generation with resolved paths
+- Output section generation with resolved paths
+- Error cases (missing repo_dir, invalid prefix)
+- Integration with EchoAdapter dry-run
+- Output path validation
+
+**Test Strategy:**
+
+Path prefixes enable explicit file resolution across three scopes:
+- `run:` - Files in current run directory (default)
+- `workflow:` - Files in workflow directory (e.g., memory files)
+- `repo:` - Files in repository root (e.g., project docs)
+
+**Example Test Cases:**
+
+```python
+# tests/test_processor.py
+
+class TestPathPrefixParsing:
+    """Unit tests for path prefix parsing."""
+    
+    def test_parse_run_prefix(self):
+        """Verify run: prefix extracts correctly."""
+        processor = PromptProcessor()
+        prefix, path = processor._parse_prefix("run:clarify.md")
+        assert prefix == "run"
+        assert path == "clarify.md"
+    
+    def test_parse_workflow_prefix(self):
+        """Verify workflow: prefix extracts correctly."""
+        processor = PromptProcessor()
+        prefix, path = processor._parse_prefix("workflow:memory/architect.md")
+        assert prefix == "workflow"
+        assert path == "memory/architect.md"
+    
+    def test_parse_repo_prefix(self):
+        """Verify repo: prefix extracts correctly."""
+        processor = PromptProcessor()
+        prefix, path = processor._parse_prefix("repo:ARCHITECTURE.md")
+        assert prefix == "repo"
+        assert path == "ARCHITECTURE.md"
+    
+    def test_parse_no_prefix_defaults_to_run(self):
+        """Verify paths without prefix default to run."""
+        processor = PromptProcessor()
+        prefix, path = processor._parse_prefix("clarify.md")
+        assert prefix == "run"
+        assert path == "clarify.md"
+
+
+class TestPathResolution:
+    """Unit tests for path resolution."""
+    
+    def test_resolve_workflow_path(self):
+        """Verify workflow: prefix resolves to workflow_dir."""
+        processor = PromptProcessor()
+        context = {
+            "workflow_dir": Path("/home/user/.flows"),
+            "run_dir": Path("/home/user/.flows/runs/test"),
+        }
+        abs_path = processor._resolve_path("workflow", "memory/ba.md", context)
+        assert abs_path == Path("/home/user/.flows/memory/ba.md")
+    
+    def test_resolve_repo_path(self):
+        """Verify repo: prefix resolves to repo_dir."""
+        processor = PromptProcessor()
+        context = {
+            "repo_dir": Path("/home/user/code/my-project"),
+            "run_dir": Path("/home/user/.flows/runs/test"),
+        }
+        abs_path = processor._resolve_path("repo", "ARCHITECTURE.md", context)
+        assert abs_path == Path("/home/user/code/my-project/ARCHITECTURE.md")
+    
+    def test_resolve_run_path(self):
+        """Verify run: prefix resolves to run_dir."""
+        processor = PromptProcessor()
+        context = {
+            "run_dir": Path("/home/user/.flows/runs/test"),
+        }
+        abs_path = processor._resolve_path("run", "clarify.md", context)
+        assert abs_path == Path("/home/user/.flows/runs/test/clarify.md")
+    
+    def test_resolve_path_missing_directory_falls_back_gracefully(self):
+        """Verify missing directory context falls back to relative path."""
+        processor = PromptProcessor()
+        context = {
+            "run_dir": Path("/home/user/.flows/runs/test"),
+        }
+        abs_path = processor._resolve_path("workflow", "memory/ba.md", context)
+        assert abs_path == Path("memory/ba.md")
+
+
+class TestPrefixInSectionGeneration:
+    """Unit tests for prefix in Input/Output section generation."""
+    
+    def test_generate_input_with_workflow_prefix(self):
+        """Verify workflow: prefix appears in generated Input section."""
+        processor = PromptProcessor()
+        node = Node(
+            role="dev",
+            prompt="test.md",
+            inputs={"arch": "workflow:memory/architect.md"},
+            outputs={},
+        )
+        context = {
+            "node": node,
+            "workflow_dir": Path("/flows"),
+            "run_dir": Path("/runs/test"),
+        }
+        result = processor.process("# Task", context)
+        assert "Read from memory/architect.md (workflow_dir: /flows/memory/architect.md)" in result
+    
+    def test_generate_output_with_workflow_prefix(self):
+        """Verify workflow: prefix appears in generated Output section."""
+        processor = PromptProcessor()
+        node = Node(
+            role="dev",
+            prompt="test.md",
+            inputs={},
+            outputs={"memory_update": "workflow:memory/ba.md"},
+        )
+        context = {
+            "node": node,
+            "workflow_dir": Path("/flows"),
+            "run_dir": Path("/runs/test"),
+        }
+        result = processor.process("# Task", context)
+        assert "Write to memory/ba.md (workflow_dir: /flows/memory/ba.md)" in result
+
+
+# tests/integration/test_path_prefix.py
+
+class TestPathPrefixIntegration:
+    """Integration tests for path prefix resolution in workflow execution."""
+    
+    def test_path_prefix_workflow_integration(self, tmp_path):
+        """Test end-to-end path prefix resolution with EchoAdapter dry-run."""
+        workflow_dir = tmp_path / "flows"
+        workflow_dir.mkdir()
+        run_dir = tmp_path / "runs" / "test"
+        run_dir.mkdir(parents=True)
+        
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        
+        # Setup files in different scopes
+        memory_dir = workflow_dir / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "architect.md").write_text("# Architect Memory")
+        
+        (repo_dir / "REPO.md").write_text("# Repo Root")
+        
+        prompt_dir = workflow_dir / "prompts"
+        prompt_dir.mkdir()
+        (prompt_dir / "test.md").write_text("# Test Task")
+        
+        workflow = WorkflowDef(
+            version="1",
+            nodes={
+                "start": Node(
+                    role="dev",
+                    prompt="prompts/test.md",
+                    inputs={
+                        "memory": "workflow:memory/architect.md",
+                        "repo": "repo:REPO.md",
+                        "local": "run:local.md",
+                    },
+                    outputs={
+                        "memory_out": "workflow:memory/output.md",
+                        "repo_out": "repo:OUTPUT.md",
+                        "local_out": "run:local_out.md",
+                    },
+                ),
+            },
+            transitions=[
+                Transition(from_="__start__", to="start"),
+                Transition(from_="start", to="__end__"),
+            ],
+        )
+        
+        registry = create_default_registry()
+        
+        result = run_workflow(
+            workflow,
+            run_dir,
+            registry=registry,
+            default_executor="echo",
+            dry_run=True,
+            workflow_dir=workflow_dir,
+            repo_dir=repo_dir,
+        )
+        
+        assert result is not None
+
+
+# tests/test_artifact_validator.py
+
+class TestOutputPathValidation:
+    """Unit tests for output path validation with prefixes."""
+    
+    def test_validate_workflow_prefix(self, tmp_path):
+        """Output with workflow: prefix should resolve to workflow_dir."""
+        workflow_dir = tmp_path / "flows"
+        workflow_dir.mkdir()
+        memory_dir = workflow_dir / "memory"
+        memory_dir.mkdir()
+        
+        output_file = memory_dir / "ba.md"
+        output_file.write_text("test content")
+        
+        errors = validate_artifacts(
+            {"memory_update": "workflow:memory/ba.md"},
+            run_dir=tmp_path / "runs/test",
+            workflow_dir=workflow_dir,
+            repo_dir=None,
+        )
+        
+        assert len(errors) == 0
+    
+    def test_validate_repo_prefix(self, tmp_path):
+        """Output with repo: prefix should resolve to repo_dir."""
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        
+        output_file = repo_dir / "ARCHITECTURE.md"
+        output_file.write_text("test content")
+        
+        errors = validate_artifacts(
+            {"arch": "repo:ARCHITECTURE.md"},
+            run_dir=tmp_path / "runs/test",
+            workflow_dir=tmp_path / "flows",
+            repo_dir=repo_dir,
+        )
+        
+        assert len(errors) == 0
+```
+
+**Test Coverage Matrix:**
+
+| Test Category | File | Test Count | Coverage |
+|---------------|------|------------|----------|
+| Prefix Parsing | `tests/test_processor.py` | 4 | run:, workflow:, repo:, no prefix |
+| Path Resolution | `tests/test_processor.py` | 4 | workflow_dir, repo_dir, run_dir, missing dir |
+| Input Section Generation | `tests/test_processor.py` | 1 | workflow: prefix in inputs |
+| Output Section Generation | `tests/test_processor.py` | 1 | workflow: prefix in outputs |
+| Integration (Dry-Run) | `tests/integration/test_path_prefix.py` | 1 | Full workflow with all prefixes |
+| Output Validation | `tests/test_artifact_validator.py` | 2 | workflow:, repo: output validation |
+
+**Total: 13 tests for path prefix feature**
+
 ### Level 3: E2E Tests (CLI + Full Workflow)
 
 **Location:** `tests/sdet/test_e2e_cli.py`
@@ -493,7 +750,10 @@ tests/
 │   ├── test_e2e_cli.py             # Level 3: CLI E2E tests
 │   ├── test_edge_cases.py          # Edge case and error handling tests
 │   └── test_performance.py         # Performance benchmarks
-├── test_processor.py               # Existing processor tests
+├── integration/
+│   └── test_path_prefix.py         # Level 2.5: Path prefix integration tests
+├── test_processor.py               # Processor tests (includes path prefix unit tests)
+├── test_artifact_validator.py      # Artifact validation tests (output path prefixes)
 ├── test_runner.py                  # Existing runner tests (includes integration)
 ├── test_executors.py               # Executor tests
 └── ...
@@ -509,6 +769,11 @@ When adding new features, verify:
 | Runner change | Integration test in `tests/sdet/test_integration_dry_run.py` |
 | CLI change | E2E test in `tests/sdet/test_e2e_cli.py` |
 | Edge case | Test in `tests/sdet/test_edge_cases.py` |
+| Path prefix parsing | Unit tests in `tests/test_processor.py` (TestPathPrefixParsing) |
+| Path resolution | Unit tests in `tests/test_processor.py` (TestPathResolution) |
+| Prefix in sections | Unit tests in `tests/test_processor.py` (TestPrefixInSectionGeneration) |
+| Prefix integration | Integration test in `tests/integration/test_path_prefix.py` |
+| Output path validation | Unit tests in `tests/test_artifact_validator.py` |
 
 ## Mocking Strategy
 
@@ -840,5 +1105,6 @@ cat tests/sdet/runs/sdet-test-*/dry-run-output.txt
 - **Design Spec:** `docs/superpowers/specs/2026-05-19-node-io-injection-design.md`
 - **Implementation:** `src/flowctl/processor.py`, `src/flowctl/runner.py`
 - **Example Tests:** `tests/test_processor.py`, `tests/test_runner.py::test_processor_in_dry_run_shows_assembled_prompt`
+- **Path Prefix Tests:** `tests/test_processor.py` (lines 213-310), `tests/integration/test_path_prefix.py`, `tests/test_artifact_validator.py`
 - **SDET Workflow:** `tests/sdet/workflows/sdet-dry-run-test.yaml`
 - **SDET Script:** `tests/sdet/run-dry-run-test.sh`

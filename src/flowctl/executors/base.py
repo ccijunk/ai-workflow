@@ -16,6 +16,7 @@ class ExecutorInput:
     inputs: dict[str, str] = field(default_factory=dict)
     outputs: dict[str, str] = field(default_factory=dict)
     workflow_dir: Optional[Path] = None
+    repo_dir: Optional[Path] = None
     node: Optional[Node] = None
 
 

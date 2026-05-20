@@ -7,6 +7,7 @@ class FlowctlConfig(BaseModel):
     framework_version: str = "0.1.0"
     run_dir: str = ".flows/runs"
     workflow_dir: str = ".flows"
+    repo_dir: Optional[str] = None
 
 
 class RoleBinding(BaseModel):

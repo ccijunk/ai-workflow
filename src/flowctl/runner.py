@@ -79,6 +79,7 @@ def run_workflow(
     dry_run: bool = False,
     initial_context: dict[str, str] | None = None,
     workflow_dir: Path | None = None,
+    repo_dir: Path | None = None,
     log_level: str = "INFO",
     log_format: str = "json",
     resume: bool = False,
@@ -199,6 +200,7 @@ def run_workflow(
             "node": node_def,
             "run_dir": run_dir,
             "workflow_dir": workflow_dir,
+            "repo_dir": repo_dir,
         }
         processed_prompt = processor.process(prompt_content, process_context)
 
@@ -211,6 +213,7 @@ def run_workflow(
             outputs=node_def.outputs,
             run_dir=run_dir,
             workflow_dir=workflow_dir,
+            repo_dir=repo_dir,
             node=node_def,
         )
 
@@ -256,7 +259,7 @@ def run_workflow(
                 node_adapter = registry.get(executor_name, **cfg)
             result = node_adapter.execute(inp)
 
-        errors = validate_artifacts(node_def.outputs, run_dir)
+        errors = validate_artifacts(node_def.outputs, run_dir, workflow_dir, repo_dir)
         logger.log_validation(next_node, errors)
         
         if errors and not dry_run:
