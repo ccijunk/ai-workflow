@@ -200,6 +200,7 @@ def run_workflow(
             "node": node_def,
             "run_dir": run_dir,
             "workflow_dir": workflow_dir,
+            "repo_dir": repo_dir,
         }
         processed_prompt = processor.process(prompt_content, process_context)
 
@@ -212,6 +213,7 @@ def run_workflow(
             outputs=node_def.outputs,
             run_dir=run_dir,
             workflow_dir=workflow_dir,
+            repo_dir=repo_dir,
             node=node_def,
         )
 
