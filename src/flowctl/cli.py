@@ -40,7 +40,7 @@ def status(config, run_dir, run_id):
     from .runner import MAX_REJECTS
     from .path_resolver import resolve_paths
     
-    resolved_run_dir, _ = resolve_paths(config, run_dir, None)
+    resolved_run_dir, _, _ = resolve_paths(config, run_dir, None, None)
     
     run_dir_path = resolved_run_dir / (run_id or "latest")
     
@@ -76,6 +76,7 @@ def status(config, run_dir, run_id):
 @click.option("--agent", default=None, help="Agent name for executor")
 @click.option("--run-dir", default=None, help="Override run directory")
 @click.option("--workflow-dir", default=None, help="Override workflow directory")
+@click.option("--repo-dir", default=None, help="Target repository directory")
 @click.option("--run-id", default=None)
 @click.option("--issue", default=None, help="GitHub issue URL to process")
 @click.option("--log-level", default="INFO", help="Log level: DEBUG, INFO, WARNING, ERROR")
@@ -85,7 +86,7 @@ def status(config, run_dir, run_id):
 @click.option("--reject", is_flag=True, help="Reject pending human node")
 @click.option("--reject-reason", default=None, help="Reason for rejection (required with --reject)")
 @click.argument("workflow", default=".flows/workflows/default.yaml")
-def run(config, dry_run, executor, model, agent, run_dir, workflow_dir, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason):
+def run(config, dry_run, executor, model, agent, run_dir, workflow_dir, repo_dir, workflow, run_id, issue, log_level, log_format, resume, approve, reject, reject_reason):
     wf_path = Path(workflow)
     if not wf_path.exists():
         click.echo(f"Workflow not found: {wf_path}", err=True)
@@ -111,7 +112,7 @@ def run(config, dry_run, executor, model, agent, run_dir, workflow_dir, workflow
         raise click.Abort()
 
     # Resolve paths from config + CLI overrides
-    resolved_run_dir, resolved_workflow_dir = resolve_paths(config, run_dir, workflow_dir)
+    resolved_run_dir, resolved_workflow_dir, resolved_repo_dir = resolve_paths(config, run_dir, workflow_dir, repo_dir)
     
     # Override run_id in run_dir if specified
     if run_id:
@@ -156,6 +157,7 @@ def run(config, dry_run, executor, model, agent, run_dir, workflow_dir, workflow
         dry_run=dry_run,
         initial_context=initial_context,
         workflow_dir=resolved_workflow_dir,
+        repo_dir=resolved_repo_dir,
         log_level=log_level,
         log_format=log_format,
         resume=resume,

@@ -47,9 +47,9 @@ class TestPromptProcessorInputSection:
         input_section_start = lines.index("## Input")
         
         # SDET: Verify order matches definition
-        assert lines[input_section_start + 2] == "- requirement: Read from requirement.md"
-        assert lines[input_section_start + 3] == "- architecture: Read from ARCHITECTURE.md"
-        assert lines[input_section_start + 4] == "- design: Read from design.md"
+        assert lines[input_section_start + 2] == "- requirement: Read from requirement.md (run_dir: requirement.md)"
+        assert lines[input_section_start + 3] == "- architecture: Read from ARCHITECTURE.md (run_dir: ARCHITECTURE.md)"
+        assert lines[input_section_start + 4] == "- design: Read from design.md (run_dir: design.md)"
     
     def test_input_with_nested_path(self):
         """Verify input with nested path preserves full path."""

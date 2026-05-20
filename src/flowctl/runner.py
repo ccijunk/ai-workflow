@@ -79,6 +79,7 @@ def run_workflow(
     dry_run: bool = False,
     initial_context: dict[str, str] | None = None,
     workflow_dir: Path | None = None,
+    repo_dir: Path | None = None,
     log_level: str = "INFO",
     log_format: str = "json",
     resume: bool = False,
