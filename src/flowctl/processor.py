@@ -37,11 +37,11 @@ class PromptProcessor:
             prefix is one of: "run", "workflow", "repo"
         """
         if filename.startswith("workflow:"):
-            return "workflow", filename[9:]
+            return "workflow", filename[len("workflow:"):]
         elif filename.startswith("repo:"):
-            return "repo", filename[5:]
+            return "repo", filename[len("repo:"):]
         elif filename.startswith("run:"):
-            return "run", filename[4:]
+            return "run", filename[len("run:"):]
         else:
             return "run", filename
     
