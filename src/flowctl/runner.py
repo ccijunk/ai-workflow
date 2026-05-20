@@ -259,7 +259,7 @@ def run_workflow(
                 node_adapter = registry.get(executor_name, **cfg)
             result = node_adapter.execute(inp)
 
-        errors = validate_artifacts(node_def.outputs, run_dir)
+        errors = validate_artifacts(node_def.outputs, run_dir, workflow_dir, repo_dir)
         logger.log_validation(next_node, errors)
         
         if errors and not dry_run:
