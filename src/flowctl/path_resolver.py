@@ -6,16 +6,20 @@ def resolve_paths(
     config_path: str,
     run_dir_override: str | None,
     workflow_dir_override: str | None,
-) -> tuple[Path, Path]:
-    """Resolve run_dir and workflow_dir from config + CLI overrides.
+    repo_dir_override: str | None = None,
+) -> tuple[Path, Path, Path | None]:
+    """Resolve run_dir, workflow_dir, and repo_dir from config + CLI overrides.
     
     Precedence: CLI > config > defaults
-    Relative paths resolved from current working directory.
+    
+    Returns:
+        Tuple of (run_dir, workflow_dir, repo_dir or None)
     """
     config = _load_config(config_path)
     
     run_dir = run_dir_override or config.run_dir or ".flows/runs"
     workflow_dir = workflow_dir_override or config.workflow_dir or ".flows"
+    repo_dir = repo_dir_override or config.repo_dir
     
     run_dir_path = Path(run_dir)
     workflow_dir_path = Path(workflow_dir)
@@ -25,7 +29,13 @@ def resolve_paths(
     if not workflow_dir_path.is_absolute():
         workflow_dir_path = Path.cwd() / workflow_dir_path
     
-    return run_dir_path, workflow_dir_path
+    repo_dir_path = None
+    if repo_dir:
+        repo_dir_path = Path(repo_dir)
+        if not repo_dir_path.is_absolute():
+            repo_dir_path = Path.cwd() / repo_dir_path
+    
+    return run_dir_path, workflow_dir_path, repo_dir_path
 
 
 def _load_config(config_path: str) -> FlowctlConfig:

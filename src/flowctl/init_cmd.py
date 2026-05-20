@@ -9,7 +9,7 @@ def run_init(target: str | None, config_path: str | None = None):
     base = Path(target or ".")
     
     if config_path:
-        _, workflow_dir = resolve_paths(config_path, None, None)
+        _, workflow_dir, _ = resolve_paths(config_path, None, None)
         flows_dir = workflow_dir
     else:
         flows_dir = base / ".flows"

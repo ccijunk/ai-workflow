@@ -5,7 +5,7 @@ from flowctl.path_resolver import resolve_paths
 
 def test_resolve_paths_defaults():
     """When no overrides and config missing, use hardcoded defaults."""
-    run_dir, workflow_dir = resolve_paths(
+    run_dir, workflow_dir, repo_dir = resolve_paths(
         config_path=".flows/config.yaml",
         run_dir_override=None,
         workflow_dir_override=None,
@@ -13,11 +13,12 @@ def test_resolve_paths_defaults():
     
     assert run_dir == Path.cwd() / ".flows" / "runs"
     assert workflow_dir == Path.cwd() / ".flows"
+    assert repo_dir is None
 
 
 def test_resolve_paths_cli_overrides_defaults():
     """CLI options override default paths."""
-    run_dir, workflow_dir = resolve_paths(
+    run_dir, workflow_dir, repo_dir = resolve_paths(
         config_path=".flows/config.yaml",
         run_dir_override="/tmp/custom-runs",
         workflow_dir_override="/shared/workflows",
@@ -25,6 +26,7 @@ def test_resolve_paths_cli_overrides_defaults():
     
     assert run_dir == Path("/tmp/custom-runs")
     assert workflow_dir == Path("/shared/workflows")
+    assert repo_dir is None
 
 
 def test_resolve_paths_cli_overrides_config():
@@ -41,7 +43,7 @@ def test_resolve_paths_cli_overrides_config():
         config_path = f.name
     
     try:
-        run_dir, workflow_dir = resolve_paths(
+        run_dir, workflow_dir, repo_dir = resolve_paths(
             config_path=config_path,
             run_dir_override="/cli/runs",
             workflow_dir_override=None,
@@ -49,6 +51,7 @@ def test_resolve_paths_cli_overrides_config():
         
         assert run_dir == Path("/cli/runs")
         assert workflow_dir == Path("/config/workflows")
+        assert repo_dir is None
     finally:
         Path(config_path).unlink()
 
@@ -67,7 +70,7 @@ def test_resolve_paths_from_config():
         config_path = f.name
     
     try:
-        run_dir, workflow_dir = resolve_paths(
+        run_dir, workflow_dir, repo_dir = resolve_paths(
             config_path=config_path,
             run_dir_override=None,
             workflow_dir_override=None,
@@ -75,6 +78,7 @@ def test_resolve_paths_from_config():
         
         assert run_dir == Path("/config/runs")
         assert workflow_dir == Path("/config/workflows")
+        assert repo_dir is None
     finally:
         Path(config_path).unlink()
 
@@ -93,7 +97,7 @@ def test_resolve_paths_relative_from_cwd():
         config_path = f.name
     
     try:
-        run_dir, workflow_dir = resolve_paths(
+        run_dir, workflow_dir, repo_dir = resolve_paths(
             config_path=config_path,
             run_dir_override=None,
             workflow_dir_override=None,
@@ -101,5 +105,33 @@ def test_resolve_paths_relative_from_cwd():
         
         assert run_dir == Path.cwd() / "my-runs"
         assert workflow_dir == Path.cwd() / "my-workflows"
+        assert repo_dir is None
     finally:
         Path(config_path).unlink()
+
+
+def test_resolve_paths_with_repo_dir_cli():
+    """CLI --repo-dir should override config."""
+    run_dir, workflow_dir, repo_dir = resolve_paths(
+        ".flows/config.yaml", None, None, repo_dir_override="/tmp/my-repo"
+    )
+    assert repo_dir == Path("/tmp/my-repo")
+
+
+def test_resolve_paths_with_repo_dir_config(tmp_path):
+    """Config repo_dir should be used if no CLI override."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("repo_dir: /tmp/config-repo")
+    
+    run_dir, workflow_dir, repo_dir = resolve_paths(
+        str(config_file), None, None, repo_dir_override=None
+    )
+    assert repo_dir == Path("/tmp/config-repo")
+
+
+def test_resolve_paths_repo_dir_none_without_config():
+    """repo_dir should be None if not in config or CLI."""
+    run_dir, workflow_dir, repo_dir = resolve_paths(
+        ".flows/nonexistent.yaml", None, None, repo_dir_override=None
+    )
+    assert repo_dir is None
