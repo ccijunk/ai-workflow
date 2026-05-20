@@ -41,6 +41,7 @@ nodes:
     inputs:
       clarify: clarify.md
       memory_architect: workflow:memory/architect.md
+      repo_architecture: repo:ARCHITECTURE.md
       testability_review: testability-review.md
       reject_reason: reject-reason.txt
     outputs: {design_md: design.md}
@@ -60,6 +61,7 @@ nodes:
       design: design.md
       clarify: clarify.md
       memory_test_arch: workflow:memory/test-arch.md
+      repo_test_architecture: repo:docs/sdet/TEST-ARCHITECTURE.md
     outputs: {test_design_md: test-design.md}
 
   developer:
