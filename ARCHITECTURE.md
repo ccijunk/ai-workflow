@@ -187,6 +187,7 @@ classDiagram
 - `outputs`: Output artifact paths (write to)
 - `run_dir`: Working directory for execution
 - `workflow_dir`: Root workflow directory (for resolving prompts/skills)
+- `repo_dir`: Target repository directory (for `repo:` prefix resolution)
 - `node`: Node definition (optional)
 
 **ExecutorResult:**
@@ -203,6 +204,7 @@ classDiagram
 - Runs with `--format json` for structured output
 - Session cleanup: extracts `sessionID` from JSON output, deletes after execution
 - Uses absolute paths for `--dir` and `cwd` to avoid path resolution issues
+- `_resolve_output_path()`: Resolves output paths based on prefix (`run:`, `workflow:`, `repo:`)
 
 ### 5. CLI (`cli.py`)
 
@@ -220,6 +222,9 @@ Commands:
   - `--approve`: Approve pending human node (requires --resume)
   - `--reject`: Reject pending human node (requires --resume)
   - `--reject-reason`: Reason for rejection (required with --reject)
+  - `--run-dir`: Override run directory
+  - `--workflow-dir`: Override workflow directory
+  - `--repo-dir`: Target repository directory
 
 ### 6. Artifact Validator (`artifact_validator.py`)
 
@@ -266,7 +271,7 @@ classDiagram
 
 ```
 .flows/
-├── config.yaml           # Framework config (executor preference, version)
+├── config.yaml           # Framework config (executor preference, version, repo_dir)
 ├── workflows/
 │   ├── spec-to-code.yaml # Full spec-to-code pipeline (16 nodes)
 │   ├── hello-world.yaml  # Test workflow
@@ -276,24 +281,30 @@ classDiagram
 │   ├── create-branch-issue.md
 │   ├── reclarify.md        # BA revises clarify based on feedback
 │   ├── redesign.md         # Architect revises design based on feedback
-│   ├── *.md                # Node prompts
+│   └── *.md                # Node prompts
 ├── roles/
 │   ├── fetcher.yaml
 │   ├── developer.yaml
 │   ├── tester.yaml
-│   ├── *.yaml            # Role configs
+│   └── *.yaml            # Role configs
 └── runs/
     ├── latest/           # Latest execution artifacts
     └── <run-id>/         # Named execution artifacts
+
+repo_dir/                   # Target repository (--repo-dir)
+├── src/
+├── docs/
+└── ...                    # Files referenced via repo: prefix
 
 src/flowctl/
 ├── cli.py                # Click CLI commands
 ├── loader.py             # YAML loader/validator
 ├── models.py             # Pydantic models
 ├── processor.py          # Processor interface and PromptProcessor
+├── path_resolver.py      # Path resolution (run_dir, workflow_dir, repo_dir)
 ├── runner.py             # Workflow execution engine
 ├── state.py              # Workflow state persistence
-├── artifact_validator.py # Output validation
+├── artifact_validator.py  # Output validation
 ├── init_cmd.py           # `init` command
 ├── upgrade_cmd.py        # `upgrade` command
 ├── executors/
@@ -308,8 +319,6 @@ tests/
 ├── test_processor.py     # Processor unit tests
 ├── test_executors.py
 └── test_*.py             # Unit tests
-```
-
 ## Data Flow
 
 ```mermaid
@@ -340,6 +349,98 @@ sequenceDiagram
 ```
 
 **Key architectural change:** Processor called by Runner before Executor, enabling testability via dry-run.
+```
+
+## Path Resolution System
+
+Flowctl supports explicit path prefixes in workflow definitions to control where files are read from and written to.
+
+### Directory Hierarchy
+
+```mermaid
+flowchart TB
+    subgraph "Directory Structure"
+        REPO["repo_dir/ (Target Repository)"]
+        WF["workflow_dir/ (.flows/)"]
+        RUN["run_dir/ (.flows/runs/latest/)"]
+    end
+    
+    REPO --> R1["repo:path.md → repo_dir/path.md"]
+    WF --> W1["workflow:mem/ba.md → workflow_dir/mem/ba.md"]
+    RUN --> U1["run:output.md → run_dir/output.md"]
+    RUN --> U2["output.md → run_dir/output.md (default)"]
+```
+
+### Path Prefixes
+
+| Prefix | Resolves To | Use Case |
+|--------|-------------|----------|
+| `run:` | `run_dir` (default) | Per-run artifacts, outputs |
+| `workflow:` | `workflow_dir` | Shared prompts, memory files |
+| `repo:` | `repo_dir` | Target repository files |
+| (none) | `run_dir` | Backward compatible |
+
+### Resolution Flow
+
+```mermaid
+flowchart TD
+    A[File Reference in Workflow] --> B{_parse_prefix}
+    B -->|"workflow:"| C[workflow_dir]
+    B -->|"repo:"| D[repo_dir]
+    B -->|"run:" or none| E[run_dir]
+    C --> F[base_dir / rel_path]
+    D --> F
+    E --> F
+    F --> G{base_dir set?}
+    G -->|Yes| H[Absolute Path]
+    G -->|No| I[run_dir / rel_path fallback]
+```
+
+### Components
+
+**1. Models (`models.py`)**
+- `FlowctlConfig.repo_dir`: Optional target repository directory
+
+**2. Path Resolver (`path_resolver.py`)**
+- `resolve_paths()`: Returns `(run_dir, workflow_dir, repo_dir)` tuple
+- Precedence: CLI args > config file > defaults
+
+**3. ExecutorInput (`executors/base.py`)**
+- `repo_dir`: Optional target repository directory
+- Passed through Runner to all executors
+
+**4. Processor (`processor.py`)**
+- `_parse_prefix()`: Extracts prefix and relative path
+- `_resolve_path()`: Resolves to absolute path
+- Injects resolved paths into I/O sections
+
+**5. Artifact Validator (`artifact_validator.py`)**
+- Resolves paths before validation
+- Checks file existence and non-empty content
+
+**6. Executors**
+- `executors/opencode.py`: `_resolve_output_path()` resolves output paths for writing
+- `executors/echo.py`: `_resolve_path()` resolves paths for dry-run display
+
+**7. CLI (`cli.py`)**
+- `--repo-dir`: Override repository directory
+
+### Example Usage
+
+```yaml
+nodes:
+  read_spec:
+    inputs:
+      spec: repo:docs/spec.md      # Read from target repository
+      template: workflow:templates/design.md
+    outputs:
+      design: run:design.md        # Write to run directory
+
+  write_code:
+    inputs:
+      design: run:design.md
+    outputs:
+      code: repo:src/main.py       # Write to target repository
 ```
 
 ## Workflow Execution Example (spec-to-code)
@@ -391,6 +492,7 @@ stateDiagram-v2
 9. **Reject count limits**: MAX_REJECTS=5 prevents infinite approval loops
 10. **Processor orchestration**: Runner → Processor → Executor enables testability via dry-run
 11. **EchoAdapter testability**: Dry-run shows processed prompt with injected I/O sections
+12. **Path prefix system**: Explicit `run:`, `workflow:`, `repo:` prefixes for file resolution
 
 ## Dependencies
 

@@ -104,6 +104,57 @@ flowctl run --workflow-dir ~/shared-workflows
 
 **Relative paths** are resolved from current working directory where `flowctl` is executed.
 
+### Path Prefixes for Input/Output Resolution
+
+Workflow nodes can specify file locations using path prefixes to control where files are read from or written to:
+
+| Prefix | Directory | Description |
+|--------|-----------|-------------|
+| `run:` (default) | `run_dir` | Files in the current run directory (`.flows/runs/<run-id>/`) |
+| `workflow:` | `workflow_dir` | Shared files in the workflow directory (`.flows/`) |
+| `repo:` | `repo_dir` | Files in the repository root (configured via `--repo-dir`) |
+
+**Syntax:**
+
+```yaml
+inputs:
+  requirement: requirement.md              # Default: run_dir
+  memory: workflow:memory/ba.md            # workflow_dir
+  architecture: repo:ARCHITECTURE.md      # repo_dir
+
+outputs:
+  design: design.md                       # Default: run_dir
+  memory_updated: workflow:memory/ba.md    # workflow_dir
+```
+
+**Example from spec-to-code-v2.yaml:**
+
+```yaml
+nodes:
+  architect:
+    inputs:
+      clarify: clarify.md                           # run_dir (default)
+      memory_architect: workflow:memory/architect.md  # workflow_dir
+      repo_architecture: repo:ARCHITECTURE.md        # repo_dir
+    outputs:
+      design_md: design.md                          # run_dir (default)
+
+  reflect:
+    inputs:
+      memory_ba: workflow:memory/ba.md               # workflow_dir
+      memory_architect: workflow:memory/architect.md # workflow_dir
+    outputs:
+      memory_ba_updated: workflow:memory/ba.md       # workflow_dir (update shared memory)
+```
+
+**Use cases:**
+
+- `run:` — Run-specific artifacts (requirements, designs, reviews)
+- `workflow:` — Shared memory files persisted across runs (agent memory, templates)
+- `repo:` — Repository files (ARCHITECTURE.md, docs/, existing source code)
+
+**Note:** Omitting a prefix defaults to `run:` for backward compatibility.
+
 ## Workflow Structure
 
 Workflows are defined in YAML with nodes and transitions:
